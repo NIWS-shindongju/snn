@@ -1,134 +1,24 @@
 version: "3.9"
 
-# ──────────────────────────────────────────────────────────
-# CarbonSNN Docker Compose Stack
-# Services: api, dashboard, worker, scheduler, redis
-# ──────────────────────────────────────────────────────────
-
-x-common-env: &common-env
-  DATABASE_URL: ${DATABASE_URL:-sqlite+aiosqlite:///./data/carbonsnn.db}
-  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-  CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
-  CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
-  APP_SECRET_KEY: ${APP_SECRET_KEY:-change-me-in-production}
-  LOG_LEVEL: ${LOG_LEVEL:-INFO}
-  DATA_DIR: /app/data
-  MODELS_DIR: /app/models/weights
-  COPERNICUS_CLIENT_ID: ${COPERNICUS_CLIENT_ID:-}
-  COPERNICUS_CLIENT_SECRET: ${COPERNICUS_CLIENT_SECRET:-}
-
-x-common-volumes: &common-volumes
-  - carbonsnn_data:/app/data
-  - carbonsnn_models:/app/models
-
 services:
-
-  # ── FastAPI backend ──────────────────────────────────────
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: runtime
-    image: carbonsnn:latest
-    container_name: carbonsnn_api
-    command: >
-      uvicorn carbonsnn.api.main:app
-      --host 0.0.0.0 --port 8000 --workers 2
-    environment:
-      <<: *common-env
-      APP_ENV: production
-    volumes: *common-volumes
+    build: .
+    container_name: spikeeo-api
     ports:
       - "8000:8000"
-    depends_on:
-      redis:
-        condition: service_healthy
+    environment:
+      - SPIKEEO_APP_ENV=production
+      - SPIKEEO_APP_DEBUG=false
+      - SPIKEEO_DATABASE_URL=sqlite+aiosqlite:///./spikeeo.db
+      - SPIKEEO_LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+      - ./pretrained:/app/pretrained
+      - ./models:/app/models
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
-
-  # ── Streamlit dashboard ───────────────────────────────────
-  dashboard:
-    image: carbonsnn:latest
-    container_name: carbonsnn_dashboard
-    command: >
-      streamlit run carbonsnn/dashboard/app.py
-      --server.port 8501
-      --server.address 0.0.0.0
-      --server.headless true
-      --browser.gatherUsageStats false
-    environment:
-      <<: *common-env
-      API_BASE_URL: http://api:8000
-      STREAMLIT_PORT: "8501"
-    volumes: *common-volumes
-    ports:
-      - "8501:8501"
-    depends_on:
-      api:
-        condition: service_healthy
-    restart: unless-stopped
-
-  # ── Celery worker ─────────────────────────────────────────
-  worker:
-    image: carbonsnn:latest
-    container_name: carbonsnn_worker
-    command: >
-      celery -A carbonsnn.scheduler.weekly_scan.celery_app worker
-      --loglevel=info --concurrency=2 -Q default
-    environment:
-      <<: *common-env
-    volumes: *common-volumes
-    depends_on:
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-
-  # ── Celery beat scheduler ──────────────────────────────────
-  scheduler:
-    image: carbonsnn:latest
-    container_name: carbonsnn_scheduler
-    command: >
-      celery -A carbonsnn.scheduler.weekly_scan.celery_app beat
-      --loglevel=info --scheduler celery.schedulers.PersistentScheduler
-    environment:
-      <<: *common-env
-      SCHEDULER_TIMEZONE: UTC
-    volumes: *common-volumes
-    depends_on:
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-
-  # ── Redis ─────────────────────────────────────────────────
-  redis:
-    image: redis:7.2-alpine
-    container_name: carbonsnn_redis
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis_data:/data
-    ports:
-      - "6379:6379"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-volumes:
-  carbonsnn_data:
-    driver: local
-  carbonsnn_models:
-    driver: local
-  redis_data:
-    driver: local
-
-networks:
-  default:
-    name: carbonsnn_network
-    driver: bridge
+      start_period: 10s

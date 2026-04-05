@@ -1,26 +1,27 @@
-# CarbonSNN
+# SpikeEO
 
-**Satellite-based Deforestation Detection & Carbon MRV SaaS**
+**Energy-Efficient Satellite Image Analysis Engine**
 powered by Spiking Neural Networks (SNN)
 
 ---
 
 ## Overview
 
-CarbonSNN monitors tropical and temperate forests using Sentinel-2 satellite imagery and energy-efficient Spiking Neural Networks. It detects deforestation events, estimates carbon stock changes, and generates Verra VCS-compatible MRV reports — all accessible via a REST API and Streamlit dashboard.
+SpikeEO analyses multispectral satellite imagery (Sentinel-2, 10-band) using biologically-inspired Spiking Neural Networks. It classifies land cover, detects change events, estimates carbon stocks, and counts objects — with a hybrid SNN→CNN routing architecture that cuts inference cost by routing only uncertain tiles through the heavier CNN fallback.
 
 ### Key Features
 
 | Feature | Description |
 |---|---|
-| **ForestSNN** | 2-class (Forest / Non-Forest) SNN — 10-band Sentinel-2 input |
-| **CarbonSNN** | 11-class IPCC land cover SNN + vegetation density regression |
-| **HybridClassifier** | SNN first pass → ResNet-18 CNN for uncertain tiles only |
-| **Change Detector** | dNDVI/dNBR rule-based + Siamese SNN (5 change types) |
-| **Carbon MRV** | IPCC Tier-2 AGB+BGB estimation, Verra VCS JSON reports |
-| **Weekly Scan** | Celery beat — automated Monday 06:00 UTC scans |
-| **REST API** | FastAPI with API-key auth, rate limiting, webhook delivery |
-| **Dashboard** | Streamlit 5-page UI with Folium maps + Plotly charts |
+| **SNNBackbone** | Configurable SNN (light / standard / deep) — 10-band Sentinel-2 input |
+| **HybridRouter** | SNN first pass → ResNet-18 CNN fallback for uncertain tiles only |
+| **ChangeDetectionTask** | dNDVI/dNBR rule-based + Siamese SNN (5 change types) |
+| **ClassificationTask** | N-class land cover classification with per-class area stats |
+| **SegmentationTask** | Dense per-pixel semantic segmentation via tile-level inference |
+| **DetectionTask** | Object counting via sliding-window inference |
+| **BenchmarkRunner** | SNN vs CNN latency, energy, and cost comparison |
+| **REST API** | FastAPI with API-key auth, rate limiting, async job tracking |
+| **Carbon MRV** | IPCC Tier-2 AGB+BGB estimation, example pipeline included |
 
 ---
 
@@ -29,10 +30,10 @@ CarbonSNN monitors tropical and temperate forests using Sentinel-2 satellite ima
 ### 1. Clone & Configure
 
 ```bash
-git clone https://github.com/your-org/carbonsnn.git
-cd carbonsnn
+git clone https://github.com/NIWS-shindongju/snn.git
+cd snn
 cp .env.example .env
-# Edit .env: set APP_SECRET_KEY and Copernicus credentials
+# Edit .env: set SPIKEEO_APP_SECRET_KEY
 ```
 
 ### 2. Install (local development)
@@ -41,167 +42,141 @@ cp .env.example .env
 pip install -e ".[dev]"
 ```
 
-### 3. Seed demo data & run
+### 3. Run inference
 
-```bash
-# Initialise DB + create demo user/projects
-python scripts/seed_demo_data.py
+```python
+import spikeeo
 
-# Start API server
-uvicorn carbonsnn.api.main:app --reload
-
-# Start dashboard (separate terminal)
-streamlit run carbonsnn/dashboard/app.py
+engine = spikeeo.Engine(task="classification", num_classes=2)
+result = engine.run("scene.tif", output_dir="./out/", output_format="geojson")
+print(result)
 ```
 
-Open:
-- API docs: http://localhost:8000/docs
-- Dashboard: http://localhost:8501
+### 4. CLI
 
-### 4. Docker Compose (production)
+```bash
+# Classify a GeoTIFF
+spikeeo run scene.tif --task classification --num-classes 11
+
+# Change detection between two images
+spikeeo change before.tif after.tif --output ./out/
+
+# Benchmark SNN vs CNN
+spikeeo benchmark --tile-size 64 --num-tiles 200
+
+# Start API server
+spikeeo serve --host 0.0.0.0 --port 8000
+```
+
+### 5. Docker Compose
 
 ```bash
 docker compose up -d
 ```
-
-Services exposed:
-- `localhost:8000` — FastAPI
-- `localhost:8501` — Streamlit
-- `localhost:6379` — Redis
 
 ---
 
 ## Architecture
 
 ```
-carbonsnn/
-├── carbonsnn/
-│   ├── config.py              # Pydantic Settings
-│   ├── models/
-│   │   ├── forest_snn.py      # Binary SNN (Forest / Non-Forest)
-│   │   ├── carbon_snn.py      # 11-class SNN + vegetation regression
-│   │   ├── change_detector.py # Rule-based + Siamese SNN
-│   │   └── hybrid.py          # SNN→CNN fallback routing
-│   ├── data/
-│   │   ├── sentinel2.py       # Copernicus OAuth2 download
-│   │   ├── cloud_mask.py      # SCL band cloud masking
-│   │   ├── preprocessor.py    # Tiling, normalisation, band stacking
-│   │   └── vegetation.py      # NDVI / EVI / NBR / NDMI / LAI
-│   ├── analysis/
-│   │   ├── deforestation.py   # Full detection pipeline → GeoJSON alerts
-│   │   ├── carbon_stock.py    # IPCC Tier-2 AGB + BGB estimation
-│   │   └── mrv_report.py      # Verra VCS JSON report generation
-│   ├── api/                   # FastAPI (auth, routes, schemas)
-│   ├── dashboard/app.py       # Streamlit 5-page dashboard
-│   ├── scheduler/             # Celery weekly scan
-│   └── db/                    # SQLAlchemy ORM + CRUD
+spikeeo/
+├── spikeeo/
+│   ├── __init__.py            # Engine export + version
+│   ├── config.py              # Pydantic Settings (SPIKEEO_ prefix)
+│   ├── engine.py              # Unified Engine entry point
+│   ├── cli.py                 # Click CLI (run / change / benchmark / serve / info)
+│   ├── core/
+│   │   ├── snn_backbone.py    # SNNBackbone (light / standard / deep)
+│   │   ├── cnn_fallback.py    # ResNet-18 CNN fallback
+│   │   ├── hybrid_router.py   # HybridRouter + CostReport
+│   │   └── converter.py       # CNN-to-SNN weight transfer
+│   ├── tasks/
+│   │   ├── classification.py  # N-class land cover classification
+│   │   ├── change_detection.py# Rule-based + Siamese SNN change detection
+│   │   ├── segmentation.py    # Dense semantic segmentation
+│   │   ├── detection.py       # Object detection / counting
+│   │   └── anomaly.py         # Anomaly / outlier detection
+│   ├── io/
+│   │   ├── geotiff_reader.py  # GeoTIFF band loading + resampling
+│   │   ├── tiler.py           # Overlapping tile / untile
+│   │   ├── cloud_mask.py      # SCL cloud masking
+│   │   ├── vegetation.py      # NDVI / EVI / NBR / NDMI / LAI
+│   │   └── output_writer.py   # GeoJSON / JSON / CSV / COG output
+│   ├── benchmark/
+│   │   ├── cnn_vs_snn.py      # Latency / energy / cost benchmarking
+│   │   └── cost_calculator.py # Cloud GPU cost estimation
+│   ├── api/                   # FastAPI server (auth, routes, schemas)
+│   └── db/                    # SQLAlchemy ORM + async CRUD
+├── examples/
+│   ├── carbon_mrv/            # IPCC Tier-2 carbon MRV pipeline
+│   ├── deforestation_alert/   # Change detection → GeoJSON alerts
+│   └── retail_counting/       # Object detection demo
 ├── scripts/
-│   ├── train_forest_snn.py    # EuroSAT → 2-class SNN training
+│   ├── train_backbone.py      # EuroSAT → SNN backbone training
 │   ├── seed_demo_data.py      # Demo data generator
 │   └── download_sentinel2.py  # CLI Sentinel-2 downloader
-└── tests/                     # pytest suite
+└── tests/                     # pytest suite (94 tests)
 ```
 
 ---
 
 ## API Reference
 
-All endpoints require `X-API-Key` header. Rate limit: 60 req/min.
+All endpoints require `X-API-Key` header. Rate limit: 60 req/min (configurable).
 
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/health` | Health check |
-| POST | `/api/v1/projects` | Create project |
-| GET | `/api/v1/projects` | List projects |
-| GET | `/api/v1/projects/{id}` | Get project |
-| PATCH | `/api/v1/projects/{id}` | Update project |
-| DELETE | `/api/v1/projects/{id}` | Delete project |
-| POST | `/api/v1/analyses` | Request analysis |
-| GET | `/api/v1/analyses/{id}` | Get analysis result |
-| GET | `/api/v1/analyses/{id}/download` | Download GeoTIFF |
-| GET | `/api/v1/alerts` | List alerts |
-| POST | `/api/v1/alerts/{id}/acknowledge` | Acknowledge alert |
-| POST | `/api/v1/webhooks` | Register webhook |
-| DELETE | `/api/v1/webhooks/{id}` | Remove webhook |
+| POST | `/inference` | Run inference on uploaded tile |
+| POST | `/inference/batch` | Batch inference |
+| POST | `/inference/change-detection` | Two-image change detection |
+| POST | `/benchmark` | SNN vs CNN benchmark |
+| GET | `/tasks` | List available task types |
+| GET | `/tasks/models` | List available model configurations |
 
 Full interactive docs: http://localhost:8000/docs
-
----
-
-## Training ForestSNN
-
-```bash
-python scripts/train_forest_snn.py \
-    --epochs 30 \
-    --batch-size 64 \
-    --output models/weights/forest_snn.pt
-```
-
-A synthetic EuroSAT-like dataset is generated automatically if the
-real EuroSAT dataset is unavailable. Outputs: trained weights +
-confusion matrix + learning curves in `models/plots/`.
-
----
-
-## Download Sentinel-2 Data
-
-```bash
-# Requires COPERNICUS_CLIENT_ID and COPERNICUS_CLIENT_SECRET in .env
-python scripts/download_sentinel2.py \
-    --bbox -55.0 -5.0 -50.0 -1.0 \
-    --start 2024-01-01 \
-    --end 2024-03-31 \
-    --max-products 3 \
-    --output-dir ./data/sentinel2
-```
 
 ---
 
 ## Testing
 
 ```bash
-# All tests
+# Full test suite with coverage
 pytest
 
-# With coverage report
-pytest --cov=carbonsnn --cov-report=html
-
-# Specific test module
-pytest tests/test_models.py -v
-pytest tests/test_carbon.py -v
+# Specific modules
+pytest tests/test_backbone.py -v
+pytest tests/test_tasks.py -v
+pytest tests/test_pipeline.py -v
 ```
 
 ---
 
 ## Environment Variables
 
-See [.env.example](.env.example) for the full list of configurable variables.
-
-Key variables:
+See [.env.example](.env.example) for all configurable variables. Key settings:
 
 | Variable | Description | Default |
 |---|---|---|
-| `DATABASE_URL` | SQLAlchemy async DB URL | `sqlite+aiosqlite:///./carbonsnn.db` |
-| `REDIS_URL` | Redis connection URL | `redis://localhost:6379/0` |
+| `SPIKEEO_DATABASE_URL` | SQLAlchemy async DB URL | `sqlite+aiosqlite:///./spikeeo.db` |
+| `SPIKEEO_APP_SECRET_KEY` | API auth signing secret | `change-me` |
+| `SPIKEEO_CONFIDENCE_THRESHOLD` | SNN→CNN routing threshold | `0.75` |
+| `SPIKEEO_DEFAULT_DEPTH` | SNN depth (light/standard/deep) | `standard` |
 | `COPERNICUS_CLIENT_ID` | Copernicus Data Space client ID | — |
 | `COPERNICUS_CLIENT_SECRET` | Copernicus Data Space secret | — |
-| `APP_SECRET_KEY` | JWT/signing secret | `change-me` |
-| `CONFIDENCE_THRESHOLD` | SNN→CNN routing threshold | `0.75` |
-| `MIN_DEFORESTATION_AREA_HA` | Minimum alert area | `0.5` |
 
 ---
 
 ## Carbon Methodology
 
-Carbon stock estimates follow **IPCC 2006 Guidelines for National
-Greenhouse Gas Inventories, Volume 4: Agriculture, Forestry and Other
-Land Use** (updated 2019 Refinement).
+Carbon stock estimates follow **IPCC 2006 Guidelines for National Greenhouse Gas Inventories, Volume 4: Agriculture, Forestry and Other Land Use** (updated 2019 Refinement).
 
 - **AGB**: Above-Ground Biomass carbon density (Mg C/ha)
 - **BGB**: Below-Ground Biomass = AGB × root-to-shoot ratio (0.26)
 - **CO2e**: Carbon × 3.667 (molecular mass ratio)
 - **Uncertainty**: ±20% (IPCC Tier 2 default)
-- **MRV Standard**: Verra Verified Carbon Standard (VCS)
+
+See [examples/carbon_mrv/](examples/carbon_mrv/) for the full pipeline.
 
 ---
 

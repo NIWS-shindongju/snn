@@ -1,1 +1,1 @@
-"""CarbonSNN test suite."""
+"""SpikeEO test suite."""

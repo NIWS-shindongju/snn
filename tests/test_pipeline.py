@@ -1,10 +1,10 @@
-"""End-to-end pipeline tests.
+"""End-to-end pipeline tests (spikeeo).
 
 Tests the integration between:
 - Vegetation index computation
 - Cloud masking
-- Image preprocessing (tiling/untiling)
-- Deforestation detection pipeline
+- Image tiling / untiling
+- Rule-based change detection
 """
 
 import logging
@@ -12,10 +12,10 @@ import logging
 import numpy as np
 import pytest
 
-from carbonsnn.analysis.deforestation import DeforestationAlert, DeforestationDetector
-from carbonsnn.data.cloud_mask import CloudMasker
-from carbonsnn.data.preprocessor import ImagePreprocessor
-from carbonsnn.data.vegetation import VegetationIndexCalculator
+from spikeeo.io.vegetation import VegetationIndexCalculator
+from spikeeo.io.cloud_mask import CloudMasker
+from spikeeo.io.tiler import Tiler
+from spikeeo.tasks.change_detection import RuleBasedChangeDetector
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,6 @@ class TestVegetationIndexCalculator:
 
     @pytest.fixture
     def calc(self) -> VegetationIndexCalculator:
-        """Return a VegetationIndexCalculator instance."""
         return VegetationIndexCalculator()
 
     def test_ndvi_perfect_vegetation(self, calc: VegetationIndexCalculator) -> None:
@@ -90,19 +89,18 @@ class TestCloudMasker:
 
     @pytest.fixture
     def masker(self) -> CloudMasker:
-        """Return a CloudMasker with default settings."""
         return CloudMasker(max_cloud_cover=20.0)
 
     def test_clear_scene_is_usable(self, masker: CloudMasker) -> None:
         """A scene with only vegetation should be usable."""
-        scl = np.full((H, W), 4, dtype=np.uint8)  # all Vegetation
+        scl = np.full((H, W), 4, dtype=np.uint8)
         result = masker.mask(scl)
         assert result.is_usable
         assert result.cloud_percentage < 1.0
 
     def test_cloudy_scene_not_usable(self, masker: CloudMasker) -> None:
         """A fully cloudy scene should not be usable."""
-        scl = np.full((H, W), 9, dtype=np.uint8)  # all Cloud High Prob
+        scl = np.full((H, W), 9, dtype=np.uint8)
         result = masker.mask(scl)
         assert not result.is_usable
         assert result.cloud_percentage == pytest.approx(100.0, abs=0.1)
@@ -117,8 +115,8 @@ class TestCloudMasker:
     def test_apply_mask_nans_in_cloud(self, masker: CloudMasker) -> None:
         """Cloudy pixels should be NaN after masking."""
         image = np.ones((BANDS, H, W), dtype=np.float32)
-        scl = np.full((H, W), 4, dtype=np.uint8)   # all clear
-        scl[0, 0] = 9  # one cloudy pixel
+        scl = np.full((H, W), 4, dtype=np.uint8)
+        scl[0, 0] = 9
         masked = masker.apply_mask(image, scl)
         assert np.isnan(masked[:, 0, 0]).all()
         assert not np.isnan(masked[:, 1, 1]).any()
@@ -132,121 +130,83 @@ class TestCloudMasker:
 
 
 # ──────────────────────────────────────────────────────────
-# Preprocessor Tests
+# Tiler Tests
 # ──────────────────────────────────────────────────────────
 
-class TestImagePreprocessor:
-    """Tests for tiling and normalisation."""
+class TestTiler:
+    """Tests for image tiling and reconstruction."""
 
     @pytest.fixture
-    def preprocessor(self) -> ImagePreprocessor:
-        """Return a default ImagePreprocessor."""
-        return ImagePreprocessor(tile_size=32, overlap=0)
+    def tiler(self) -> Tiler:
+        return Tiler(tile_size=32, overlap=0)
 
-    def test_normalize_range(self, preprocessor: ImagePreprocessor) -> None:
+    def test_normalize_range(self, tiler: Tiler) -> None:
         """Normalised values should be in [0, 1]."""
         raw = np.random.randint(0, 12000, (BANDS, H, W)).astype(np.float32)
-        normed = preprocessor.normalize(raw)
+        normed = tiler.normalize(raw)
         assert normed.min() >= 0.0
         assert normed.max() <= 1.0
 
-    def test_tile_produces_correct_count(self, preprocessor: ImagePreprocessor) -> None:
-        """Tiling a 128×128 image with 32 tile/0 overlap should give 4×4=16 tiles."""
+    def test_tile_produces_correct_count(self, tiler: Tiler) -> None:
+        """Tiling a 128×128 image with tile=32/overlap=0 gives 4×4=16 tiles."""
         image = np.random.rand(BANDS, H, W).astype(np.float32)
-        tiles, positions = preprocessor.tile(image)
+        tiles, positions = tiler.tile(image, normalize=False)
         assert len(tiles) == 16
         assert len(positions) == 16
         assert tiles[0].shape == (BANDS, 32, 32)
 
-    def test_untile_reconstructs_shape(self, preprocessor: ImagePreprocessor) -> None:
+    def test_untile_reconstructs_shape(self, tiler: Tiler) -> None:
         """Untiling should recover the original spatial shape."""
         image = np.random.rand(BANDS, H, W).astype(np.float32)
-        tiles, positions = preprocessor.tile(image)
-        reconstructed = preprocessor.untile(tiles, positions, (H, W))
+        tiles, positions = tiler.tile(image, normalize=False)
+        reconstructed = tiler.untile(tiles, positions, (H, W))
         assert reconstructed.shape == (BANDS, H, W)
 
 
 # ──────────────────────────────────────────────────────────
-# Deforestation Detection Pipeline Tests
+# Rule-Based Change Detection Integration
 # ──────────────────────────────────────────────────────────
 
-class TestDeforestationDetector:
-    """Integration tests for the deforestation detection pipeline."""
+class TestRuleBasedPipeline:
+    """Integration tests for the spectral-index change detection pipeline."""
 
     @pytest.fixture
-    def detector(self) -> DeforestationDetector:
-        """Return a DeforestationDetector with low area threshold."""
-        return DeforestationDetector(min_area_ha=0.01)
+    def calc(self) -> VegetationIndexCalculator:
+        return VegetationIndexCalculator()
 
-    def test_detects_significant_change(self, detector: DeforestationDetector) -> None:
-        """Should return an alert when deforestation is clearly present."""
-        from datetime import datetime
+    @pytest.fixture
+    def detector(self) -> RuleBasedChangeDetector:
+        return RuleBasedChangeDetector(ndvi_threshold=0.15, min_area_ha=0.01)
 
-        # Create before/after pair with drastic NDVI drop
+    def test_detects_significant_change(
+        self, calc: VegetationIndexCalculator, detector: RuleBasedChangeDetector
+    ) -> None:
+        """Drastic NDVI drop should produce an above-threshold change result."""
         bands_before = np.ones((BANDS, H, W), dtype=np.float32) * 0.5
         bands_after = np.ones((BANDS, H, W), dtype=np.float32) * 0.1
+        # Band layout: B02=0, B03=1, B04=2(Red), B08=3(NIR)
+        bands_before[3] = 0.8  # high NIR
+        bands_before[2] = 0.1  # low Red → high NDVI
+        bands_after[3] = 0.2   # NIR drops
+        bands_after[2] = 0.5   # Red increases → low NDVI
 
-        # NIR (band index 6 = B08) high, Red (band 2) low → high NDVI before
-        bands_before[6] = 0.8
-        bands_before[2] = 0.1
-        # After: NIR drops, Red increases → NDVI loss
-        bands_after[6] = 0.2
-        bands_after[2] = 0.5
+        indices_before = calc.compute_all(bands_before)
+        indices_after = calc.compute_all(bands_after)
 
-        alert = detector.detect_from_pair(
-            bands_before=bands_before,
-            bands_after=bands_after,
-            project_id="test-project-001",
-            sensing_date_before=datetime(2024, 1, 1),
-            sensing_date_after=datetime(2024, 2, 1),
+        result = detector.detect(
+            indices_before.ndvi, indices_after.ndvi,
+            indices_before.nbr, indices_after.nbr,
         )
-        assert alert is not None
-        assert alert.area_ha > 0
-        assert alert.severity in ("low", "medium", "high")
-        assert alert.project_id == "test-project-001"
+        assert result.is_above_threshold
+        assert result.area_ha > 0
+        assert result.pixel_count > 0
 
-    def test_no_alert_for_stable_scene(self, detector: DeforestationDetector) -> None:
+    def test_no_alert_for_stable_scene(
+        self, calc: VegetationIndexCalculator, detector: RuleBasedChangeDetector
+    ) -> None:
         """Identical images should not produce an alert."""
-        from datetime import datetime
-
         bands = np.random.rand(BANDS, H, W).astype(np.float32) * 0.5 + 0.3
-
-        alert = detector.detect_from_pair(
-            bands_before=bands,
-            bands_after=bands,  # identical
-            project_id="test-project-002",
-            sensing_date_before=datetime(2024, 1, 1),
-            sensing_date_after=datetime(2024, 2, 1),
-        )
-        assert alert is None
-
-    def test_alert_severity_thresholds(self) -> None:
-        """Test severity classification at boundary values."""
-        assert DeforestationAlert.severity_from_area(0.5) == "low"
-        assert DeforestationAlert.severity_from_area(1.0) == "medium"
-        assert DeforestationAlert.severity_from_area(5.0) == "medium"
-        assert DeforestationAlert.severity_from_area(10.0) == "high"
-        assert DeforestationAlert.severity_from_area(100.0) == "high"
-
-    def test_alert_to_dict_serialisable(self, detector: DeforestationDetector) -> None:
-        """Alert.to_dict() should return JSON-serialisable content."""
-        from datetime import datetime
-
-        import json
-
-        bands_b = np.ones((BANDS, H, W)) * 0.7
-        bands_a = np.ones((BANDS, H, W)) * 0.1
-        bands_b[6] = 0.9
-        bands_b[2] = 0.05
-
-        alert = detector.detect_from_pair(
-            bands_before=bands_b.astype(np.float32),
-            bands_after=bands_a.astype(np.float32),
-            project_id="test-project-003",
-            sensing_date_before=datetime(2024, 1, 1),
-            sensing_date_after=datetime(2024, 2, 1),
-        )
-
-        if alert:
-            d = alert.to_dict()
-            json.dumps(d)  # should not raise
+        indices = calc.compute_all(bands)
+        result = detector.detect(indices.ndvi, indices.ndvi, indices.nbr, indices.nbr)
+        assert result.pixel_count == 0
+        assert not result.is_above_threshold

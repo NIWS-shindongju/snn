@@ -1,0 +1,1 @@
+"""SpikeEO REST API package."""

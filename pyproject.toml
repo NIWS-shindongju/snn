@@ -3,13 +3,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "carbonsnn"
-version = "0.1.0"
-description = "Satellite-based deforestation detection and carbon MRV SaaS using Spiking Neural Networks"
+name = "spikeeo"
+version = "0.2.0"
+description = "Energy-efficient satellite image analysis engine powered by Spiking Neural Networks"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "CarbonSNN Team" }]
+authors = [{ name = "SpikeEO Team" }]
 
 dependencies = [
     # Core ML
@@ -22,46 +22,42 @@ dependencies = [
     "rasterio>=1.3.9",
     "shapely>=2.0.3",
     "pyproj>=3.6.1",
-    "geopandas>=0.14.3",
-    "folium>=0.16.0",
-    # API & Web
-    "fastapi>=0.110.0",
-    "uvicorn[standard]>=0.29.0",
-    "streamlit>=1.33.0",
-    "httpx>=0.27.0",
-    "plotly>=5.20.0",
-    # DB & ORM
-    "sqlalchemy>=2.0.29",
-    "alembic>=1.13.1",
-    "aiosqlite>=0.20.0",
-    # Task Queue
-    "celery[redis]>=5.3.6",
-    "redis>=5.0.3",
     # Config & Validation
     "pydantic>=2.7.0",
     "pydantic-settings>=2.2.1",
     "python-dotenv>=1.0.1",
-    # Auth & Security
-    "python-jose[cryptography]>=3.3.0",
-    "passlib[bcrypt]>=1.7.4",
-    "slowapi>=0.1.9",
+    # CLI
+    "click>=8.1.0",
     # Utilities
     "tenacity>=8.2.3",
-    "structlog>=24.1.0",
-    "rich>=13.7.1",
-    "typer>=0.12.3",
     "tqdm>=4.66.2",
-    "pandas>=2.2.1",
-    "matplotlib>=3.8.4",
-    "seaborn>=0.13.2",
-    "scikit-learn>=1.4.2",
-    "pillow>=10.3.0",
-    "aiofiles>=23.2.1",
-    "starlette>=0.37.2",
-    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
+api = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.29.0",
+    "slowapi>=0.1.9",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "bcrypt>=4.0.1,<5.0.0",
+    "python-multipart>=0.0.9",
+    "aiofiles>=23.2.1",
+    "sqlalchemy>=2.0.29",
+    "aiosqlite>=0.20.0",
+    "httpx>=0.27.0",
+]
+dashboard = [
+    "streamlit>=1.33.0",
+    "folium>=0.16.0",
+    "streamlit-folium>=0.18.0",
+    "plotly>=5.20.0",
+]
+scheduler = [
+    "celery[redis]>=5.3.6",
+    "redis>=5.0.3",
+]
+full = ["spikeeo[api,dashboard,scheduler]"]
 dev = [
     "pytest>=8.1.1",
     "pytest-asyncio>=0.23.6",
@@ -71,18 +67,20 @@ dev = [
     "ruff>=0.4.1",
     "mypy>=1.9.0",
     "pre-commit>=3.7.0",
-]
-postgresql = [
-    "psycopg2-binary>=2.9.9",
-    "asyncpg>=0.29.0",
+    # For examples/tests
+    "geopandas>=0.14.3",
+    "pandas>=2.2.1",
+    "scikit-learn>=1.4.2",
+    "matplotlib>=3.8.4",
+    "rich>=13.7.1",
 ]
 
 [project.scripts]
-carbonsnn-api = "carbonsnn.api.main:start"
-carbonsnn-dashboard = "carbonsnn.dashboard.app:main"
+spikeeo = "spikeeo.cli:main"
+spikeeo-api = "spikeeo.api.server:start"
 
 [tool.hatch.build.targets.wheel]
-packages = ["carbonsnn"]
+packages = ["spikeeo", "examples"]
 
 [tool.black]
 line-length = 100
@@ -90,8 +88,6 @@ target-version = ["py311"]
 
 [tool.ruff]
 line-length = 100
-select = ["E", "F", "W", "I", "N", "UP", "ANN"]
-ignore = ["ANN101", "ANN102"]
 target-version = "py311"
 
 [tool.mypy]
@@ -102,4 +98,4 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "-v --tb=short --cov=carbonsnn --cov-report=term-missing"
+addopts = "-v --tb=short --cov=spikeeo --cov-report=term-missing"
