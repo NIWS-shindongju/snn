@@ -31,6 +31,9 @@ dependencies = [
     # Utilities
     "tenacity>=8.2.3",
     "tqdm>=4.66.2",
+    # Visualisation
+    "matplotlib>=3.8.4",
+    "seaborn>=0.13.2",
 ]
 
 [project.optional-dependencies]
@@ -72,7 +75,9 @@ dev = [
     "pandas>=2.2.1",
     "scikit-learn>=1.4.2",
     "matplotlib>=3.8.4",
+    "seaborn>=0.13.2",
     "rich>=13.7.1",
+    "thop>=0.1.1",
 ]
 
 [project.scripts]

@@ -65,3 +65,10 @@ celerybeat.pid
 
 # Jupyter
 .ipynb_checkpoints/
+
+# EuroSAT dataset and training results
+data/eurosat/
+results/
+*.pt
+*.pth
+!pretrained/.gitkeep
