@@ -1,4 +1,10 @@
-"""train_snn.py: Train an SNNBackbone on a custom dataset.
+# DEPRECATED: Use scripts/train_eurosat.py instead.
+# This file is kept as a minimal stub for custom dataset training skeletons.
+"""train_snn.py: Minimal stub for training SNNBackbone on a custom dataset.
+
+DEPRECATED: scripts/train_eurosat.py provides a full, production-ready training
+pipeline (EuroSAT download, early stopping, tqdm, confusion matrices, curves).
+Use this script only as a starting-point template for non-EuroSAT datasets.
 
 Usage:
     python scripts/train_snn.py \\

@@ -46,8 +46,7 @@ async def download(
         )
         return
 
-    # Use the existing sentinel2 downloader from carbonsnn (kept for compatibility)
-    # or implement a direct httpx-based downloader here.
+    # TODO: Implement spikeeo-native SentinelDownloader using httpx + Copernicus OData API.
     logger.info("Searching Copernicus for products: bbox=%s dates=%s to %s", bbox, start_date, end_date)
     logger.info("Output directory: %s", output_dir)
     logger.info("Note: Implement SentinelDownloader here for actual downloads.")

@@ -1,4 +1,10 @@
-"""benchmark_run.py: CLI benchmark runner for SNN vs CNN comparison.
+# DEPRECATED: Use scripts/run_benchmark.py instead.
+# This file is kept for backward compatibility with Engine-based benchmark workflows.
+"""benchmark_run.py: CLI benchmark runner using spikeeo.Engine (deprecated stub).
+
+DEPRECATED: scripts/run_benchmark.py provides a full, EuroSAT-validated benchmark
+pipeline with 4 output artefacts (JSON report + 3 charts + cost projection).
+Use this script only when benchmarking via the Engine.benchmark() interface.
 
 Usage:
     python scripts/benchmark_run.py --data ./test_tiles/ --output benchmark.json

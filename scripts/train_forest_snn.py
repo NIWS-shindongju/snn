@@ -1,7 +1,13 @@
-"""Training script for ForestSNN using EuroSAT dataset.
+# DEPRECATED: Use scripts/train_eurosat.py instead.
+# This file is kept for backward compatibility with forest-specific (binary) workflows.
+"""Training script for binary Forest / Non-Forest SNNBackbone (EuroSAT-based).
+
+DEPRECATED: scripts/train_eurosat.py covers this workflow with more features
+(10-class, early stopping, tqdm, --max-samples, confusion matrices).
+Use this script only for the specific binary forest/non-forest use case.
 
 Downloads EuroSAT, remaps 10 land cover classes to binary (Forest / Non-Forest),
-then trains ForestSNN with AdamW + CosineAnnealingLR for 30 epochs.
+then trains SNNBackbone(depth='light', num_classes=2) for 30 epochs.
 
 Usage:
     python scripts/train_forest_snn.py [--epochs 30] [--batch-size 64] [--output models/weights/forest_snn.pt]
