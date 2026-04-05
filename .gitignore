@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env
+
+# Environment variables (keep .env.example)
+.env
+
+# Database
+*.db
+*.sqlite3
+carbonsnn.db
+
+# Model weights (large binary files)
+models/weights/*.pt
+models/weights/*.pth
+models/weights/*.bin
+models/plots/
+
+# Data directories
+data/sentinel2/
+data/tiles/
+data/results/
+data/cache/
+
+# Logs
+logs/
+*.log
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Jupyter
+.ipynb_checkpoints/
