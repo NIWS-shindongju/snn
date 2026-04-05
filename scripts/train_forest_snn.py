@@ -28,7 +28,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision import transforms
 
-from carbonsnn.models.forest_snn import ForestSNN
+from spikeeo.core.snn_backbone import SNNBackbone as ForestSNN
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -249,7 +249,7 @@ def main() -> None:
     )
 
     # ── Model ─────────────────────────────────────────────
-    model = ForestSNN(num_steps=args.num_steps, tile_size=args.tile_size).to(device)
+    model = ForestSNN(num_classes=2, depth="light", num_steps=args.num_steps, tile_size=args.tile_size).to(device)
     logger.info("Model parameters: %d", sum(p.numel() for p in model.parameters()))
 
     # ── Optimiser + Scheduler + Loss ──────────────────────
