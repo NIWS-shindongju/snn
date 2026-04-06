@@ -1,24 +1,66 @@
 version: "3.9"
 
+# TraceCheck — EUDR Supply Chain Pre-screening SaaS
+# ─────────────────────────────────────────────────
+# Services:
+#   api       - FastAPI backend (port 8000)
+#   dashboard - Streamlit UI (port 8501)
+#
+# Usage:
+#   docker-compose up -d                 # start all
+#   docker-compose logs -f api           # tail API logs
+#   docker-compose exec api alembic upgrade head  # run migrations
+#   docker-compose exec api python scripts/seed_demo.py
+
 services:
   api:
-    build: .
-    container_name: spikeeo-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tracecheck-api
     ports:
       - "8000:8000"
     environment:
-      - SPIKEEO_APP_ENV=production
-      - SPIKEEO_APP_DEBUG=false
-      - SPIKEEO_DATABASE_URL=sqlite+aiosqlite:///./spikeeo.db
-      - SPIKEEO_LOG_LEVEL=INFO
+      - TRACECHECK_DATABASE_URL=sqlite+aiosqlite:////data/tracecheck.db
+      - TRACECHECK_DEBUG=false
+      - TRACECHECK_SECRET_KEY=${TRACECHECK_SECRET_KEY:-changeme-use-env-in-production}
+      - TRACECHECK_COPERNICUS_CLIENT_ID=${TRACECHECK_COPERNICUS_CLIENT_ID:-}
+      - TRACECHECK_COPERNICUS_CLIENT_SECRET=${TRACECHECK_COPERNICUS_CLIENT_SECRET:-}
+      - TRACECHECK_NDVI_THRESHOLD=0.10
+      - TRACECHECK_NDVI_HIGH_THRESHOLD=0.15
+      - TRACECHECK_DATA_DIR=/data
     volumes:
-      - ./data:/app/data
-      - ./pretrained:/app/pretrained
-      - ./models:/app/models
+      - tracecheck_data:/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 15s
+    command: >
+      sh -c "alembic upgrade head &&
+             python scripts/seed_demo.py &&
+             uvicorn tracecheck.api.main:app --host 0.0.0.0 --port 8000"
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tracecheck-dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - TRACECHECK_API_URL=http://api:8000
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    command: streamlit run frontend/app.py --server.port=8501 --server.address=0.0.0.0
+
+volumes:
+  tracecheck_data:
+    driver: local
