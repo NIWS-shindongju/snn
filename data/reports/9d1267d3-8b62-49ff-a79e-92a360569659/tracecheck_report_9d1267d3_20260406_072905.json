@@ -1,0 +1,205 @@
+{
+  "report_meta": {
+    "tool": "TraceCheck",
+    "tool_version": "0.2.0",
+    "report_type": "EUDR_DUE_DILIGENCE_PRESCREENING",
+    "generated_at": "2026-04-06T07:29:05.638037+00:00",
+    "generated_by": "demo@tracecheck.io",
+    "organisation": "ACME Coffee Importers"
+  },
+  "project": {
+    "id": "093d000b-50ff-445b-9d3f-33d8ccc1249c",
+    "name": "Colombia Coffee Q1-2024",
+    "commodity": "coffee",
+    "origin_country": "CO",
+    "cutoff_date": "2020-12-31"
+  },
+  "analysis": {
+    "job_run_id": "9d1267d3-8b62-49ff-a79e-92a360569659",
+    "status": "done",
+    "started_at": "2026-04-06T07:28:37.493443",
+    "completed_at": "2026-04-06T07:28:38.106740",
+    "data_source": "Copernicus Sentinel-2 L2A",
+    "eudr_cutoff_date": "2020-12-31"
+  },
+  "summary": {
+    "total_plots": 5,
+    "low": 0,
+    "review": 5,
+    "high": 0,
+    "low_pct": 0.0,
+    "review_pct": 100.0,
+    "high_pct": 0.0
+  },
+  "plots": [
+    {
+      "plot_id": "b692fcef-57d1-4316-81eb-006f0d599759",
+      "plot_ref": "COL-001",
+      "supplier_name": "Finca La Esperanza",
+      "country": "CO",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.5,
+          2.1
+        ]
+      },
+      "risk_level": "review",
+      "delta_ndvi": 0.0176,
+      "changed_area_ha": 30.22,
+      "cloud_fraction": 0.0,
+      "confidence": 1.0,
+      "flag_reason": "changed_area_30.22ha",
+      "before_scene_date": "2020-07-04",
+      "after_scene_date": "2026-04-06",
+      "data_source": "Copernicus Sentinel-2",
+      "assessed_at": "2026-04-06T07:28:37.981085"
+    },
+    {
+      "plot_id": "73a1b5b2-511d-4263-ac3d-daea33bc0db8",
+      "plot_ref": "COL-002",
+      "supplier_name": "Cooperativa del Sur",
+      "country": "CO",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -76.42,
+              1.85
+            ],
+            [
+              -76.4,
+              1.85
+            ],
+            [
+              -76.4,
+              1.87
+            ],
+            [
+              -76.42,
+              1.87
+            ],
+            [
+              -76.42,
+              1.85
+            ]
+          ]
+        ]
+      },
+      "risk_level": "review",
+      "delta_ndvi": 0.021,
+      "changed_area_ha": 30.3,
+      "cloud_fraction": 0.0,
+      "confidence": 1.0,
+      "flag_reason": "changed_area_30.30ha",
+      "before_scene_date": "2020-07-04",
+      "after_scene_date": "2026-04-06",
+      "data_source": "Copernicus Sentinel-2",
+      "assessed_at": "2026-04-06T07:28:38.009724"
+    },
+    {
+      "plot_id": "64c0c73b-9678-4cf3-80c2-c0f1f450ca4f",
+      "plot_ref": "COL-003",
+      "supplier_name": "Finca Montaña Verde",
+      "country": "CO",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -77.1,
+          1.4
+        ]
+      },
+      "risk_level": "review",
+      "delta_ndvi": 0.0173,
+      "changed_area_ha": 30.12,
+      "cloud_fraction": 0.0,
+      "confidence": 1.0,
+      "flag_reason": "changed_area_30.12ha",
+      "before_scene_date": "2020-07-04",
+      "after_scene_date": "2026-04-06",
+      "data_source": "Copernicus Sentinel-2",
+      "assessed_at": "2026-04-06T07:28:38.039871"
+    },
+    {
+      "plot_id": "4b4d9ba2-efbe-4d73-a827-708bf81c19da",
+      "plot_ref": "COL-004",
+      "supplier_name": "Hacienda Bella Vista",
+      "country": "CO",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.9,
+          5.5
+        ]
+      },
+      "risk_level": "review",
+      "delta_ndvi": 0.0191,
+      "changed_area_ha": 30.86,
+      "cloud_fraction": 0.0,
+      "confidence": 1.0,
+      "flag_reason": "changed_area_30.86ha",
+      "before_scene_date": "2020-07-04",
+      "after_scene_date": "2026-04-06",
+      "data_source": "Copernicus Sentinel-2",
+      "assessed_at": "2026-04-06T07:28:38.070150"
+    },
+    {
+      "plot_id": "3e48b6c1-983c-4554-9641-2f79a7dffdc3",
+      "plot_ref": "COL-005",
+      "supplier_name": "Empresa Agro San Juan",
+      "country": "CO",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -76.0,
+              2.5
+            ],
+            [
+              -75.98,
+              2.5
+            ],
+            [
+              -75.98,
+              2.52
+            ],
+            [
+              -76.0,
+              2.52
+            ],
+            [
+              -76.0,
+              2.5
+            ]
+          ]
+        ]
+      },
+      "risk_level": "review",
+      "delta_ndvi": 0.0209,
+      "changed_area_ha": 30.82,
+      "cloud_fraction": 0.0,
+      "confidence": 1.0,
+      "flag_reason": "changed_area_30.82ha",
+      "before_scene_date": "2020-07-04",
+      "after_scene_date": "2026-04-06",
+      "data_source": "Copernicus Sentinel-2",
+      "assessed_at": "2026-04-06T07:28:38.100467"
+    }
+  ],
+  "disclaimer": {
+    "en": "This report is generated by TraceCheck, an AI-assisted pre-screening tool for supply chain due diligence. The risk classifications provided herein are based on satellite-derived spectral indices (Sentinel-2, Copernicus) and do NOT constitute a legal determination of compliance with the EU Deforestation Regulation (EUDR/EU 2023/1115) or any other regulatory framework. All final compliance decisions remain the sole responsibility of the reporting organisation. Results may be affected by cloud cover, seasonal vegetation changes, and satellite data availability. Parcels classified as HIGH or REVIEW risk should be subject to independent expert review and, where appropriate, field verification.",
+    "ko": "본 보고서는 공급망 사전실사를 위한 AI 보조 사전점검 도구 TraceCheck에 의해 생성되었습니다. 본 리스크 분류는 위성 기반 분광 지수(Sentinel-2, Copernicus)에 근거하며, EU 산림전용방지규정(EUDR/EU 2023/1115) 또는 기타 규제 프레임워크에 따른 법적 준수 여부의 최종 판정을 구성하지 않습니다. 모든 최종 준수 결정에 대한 법적 책임은 보고 기관에 있습니다. HIGH 또는 REVIEW 등급 필지에 대해서는 전문가 검토 및 현장 실사를 병행하시기 바랍니다."
+  },
+  "risk_methodology": {
+    "description": "Rule-based spectral index change detection using Sentinel-2 imagery",
+    "indices_used": [
+      "NDVI (Normalised Difference Vegetation Index)",
+      "NBR (Normalised Burn Ratio)"
+    ],
+    "low": "No significant vegetation change detected after EUDR cutoff date.",
+    "review": "Borderline change values OR high cloud coverage. Human expert review recommended before final due diligence submission.",
+    "high": "Clear vegetation loss detected after EUDR cutoff date. Independent field verification strongly recommended."
+  }
+}

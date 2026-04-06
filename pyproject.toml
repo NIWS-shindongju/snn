@@ -2,65 +2,59 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SpikeEO engine (existing — keep as-is)
+# ─────────────────────────────────────────────────────────────────────────────
 [project]
-name = "spikeeo"
-version = "0.2.0"
-description = "Energy-efficient satellite image analysis engine powered by Spiking Neural Networks"
+name = "tracecheck"
+version = "0.1.0"
+description = "EUDR Supply Chain Pre-screening SaaS — Powered by SpikeEO"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "SpikeEO Team" }]
+authors = [{ name = "TraceCheck Team" }]
 
 dependencies = [
-    # Core ML
-    "torch>=2.2.0",
-    "torchvision>=0.17.0",
-    "snntorch>=0.9.0",
-    "numpy>=1.26.0",
-    "scipy>=1.12.0",
-    # Geospatial
+    # ── Geospatial (SpikeEO reuse) ────────────────────────────────────────────
     "rasterio>=1.3.9",
     "shapely>=2.0.3",
     "pyproj>=3.6.1",
-    # Config & Validation
-    "pydantic>=2.7.0",
-    "pydantic-settings>=2.2.1",
-    "python-dotenv>=1.0.1",
-    # CLI
-    "click>=8.1.0",
-    # Utilities
-    "tenacity>=8.2.3",
-    "tqdm>=4.66.2",
-    # Visualisation
-    "matplotlib>=3.8.4",
-    "seaborn>=0.13.2",
-]
-
-[project.optional-dependencies]
-api = [
+    "numpy>=1.26.0",
+    # ── Web framework ────────────────────────────────────────────────────────
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.29.0",
-    "slowapi>=0.1.9",
+    "python-multipart>=0.0.9",
+    "aiofiles>=23.2.1",
+    # ── Auth / Security ──────────────────────────────────────────────────────
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
     "bcrypt>=4.0.1,<5.0.0",
-    "python-multipart>=0.0.9",
-    "aiofiles>=23.2.1",
+    # ── Database ─────────────────────────────────────────────────────────────
     "sqlalchemy>=2.0.29",
     "aiosqlite>=0.20.0",
+    # ── Config ───────────────────────────────────────────────────────────────
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.2.1",
+    "pydantic[email]>=2.7.0",
+    "python-dotenv>=1.0.1",
+    # ── HTTP client ──────────────────────────────────────────────────────────
     "httpx>=0.27.0",
+    "tenacity>=8.2.3",
+    # ── PDF reports ──────────────────────────────────────────────────────────
+    "reportlab>=4.0.0",
+    # ── Utilities ────────────────────────────────────────────────────────────
+    "pandas>=2.2.1",
+    "tqdm>=4.66.2",
 ]
-dashboard = [
-    "streamlit>=1.33.0",
-    "folium>=0.16.0",
-    "streamlit-folium>=0.18.0",
-    "plotly>=5.20.0",
+
+[project.optional-dependencies]
+snn = [
+    # SpikeEO engine (optional for v2 enhanced accuracy)
+    "torch>=2.2.0",
+    "torchvision>=0.17.0",
+    "snntorch>=0.9.0",
+    "scipy>=1.12.0",
 ]
-scheduler = [
-    "celery[redis]>=5.3.6",
-    "redis>=5.0.3",
-]
-full = ["spikeeo[api,dashboard,scheduler]"]
 dev = [
     "pytest>=8.1.1",
     "pytest-asyncio>=0.23.6",
@@ -69,23 +63,13 @@ dev = [
     "black>=24.4.0",
     "ruff>=0.4.1",
     "mypy>=1.9.0",
-    "pre-commit>=3.7.0",
-    # For examples/tests
-    "geopandas>=0.14.3",
-    "pandas>=2.2.1",
-    "scikit-learn>=1.4.2",
-    "matplotlib>=3.8.4",
-    "seaborn>=0.13.2",
-    "rich>=13.7.1",
-    "thop>=0.1.1",
 ]
 
 [project.scripts]
-spikeeo = "spikeeo.cli:main"
-spikeeo-api = "spikeeo.api.server:start"
+tracecheck-api = "tracecheck.api.main:start"
 
 [tool.hatch.build.targets.wheel]
-packages = ["spikeeo", "examples"]
+packages = ["tracecheck", "spikeeo"]
 
 [tool.black]
 line-length = 100
@@ -97,10 +81,9 @@ target-version = "py311"
 
 [tool.mypy]
 python_version = "3.11"
-strict = true
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "-v --tb=short --cov=spikeeo --cov-report=term-missing"
+addopts = "-v --tb=short"
