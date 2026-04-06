@@ -31,6 +31,12 @@ router = APIRouter(tags=["analysis"])
     response_model=JobRunOut,
     status_code=status.HTTP_202_ACCEPTED,
 )
+@router.post(
+    "/projects/{project_id}/assess",
+    response_model=JobRunOut,
+    status_code=status.HTTP_202_ACCEPTED,
+    include_in_schema=False,
+)
 async def trigger_analysis(
     project_id: str,
     background_tasks: BackgroundTasks,

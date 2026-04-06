@@ -32,6 +32,12 @@ router = APIRouter(tags=["reports"])
     response_model=EvidenceExportOut,
     status_code=status.HTTP_201_CREATED,
 )
+@router.post(
+    "/jobs/{job_id}/export",
+    response_model=EvidenceExportOut,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
 async def create_evidence_export(
     job_id: str,
     body: ExportRequest,
@@ -88,6 +94,16 @@ async def create_evidence_export(
     )
     await db.commit()
     return EvidenceExportOut.model_validate(export)
+
+
+@router.get("/exports/{report_id}/download", include_in_schema=False)
+async def download_export_alias(
+    report_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> FileResponse:
+    """Alias for /reports/{id}/download."""
+    return await download_export(report_id, current_user, db)
 
 
 @router.get("/reports/{report_id}/download")

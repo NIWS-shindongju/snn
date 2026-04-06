@@ -1,9 +1,16 @@
-"""Auth endpoints: register / login / me."""
+"""Auth endpoints: register / login / me.
+
+Supports two login methods:
+  1. POST /auth/login   — OAuth2 form-data (username=email, password=...)
+  2. POST /auth/token   — JSON body {"email": "...", "password": "..."}
+     (also aliased at /auth/login/json for Streamlit / API clients)
+"""
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tracecheck.api.auth import (
@@ -19,6 +26,24 @@ from tracecheck.db.session import get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+async def _authenticate(db: AsyncSession, email: str, password: str) -> User:
+    """Shared auth logic — raises 401 on failure."""
+    user = await get_user_by_email(db, email)
+    if not user or not verify_password(password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
+    return user
+
+
+# ── endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)) -> User:
@@ -43,22 +68,49 @@ async def login(
     form: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
-    """Authenticate and return a JWT access token.
-    
-    Use email as `username` field.
-    """
-    user = await get_user_by_email(db, form.username)
-    if not user or not verify_password(form.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
+    """Authenticate via OAuth2 form-data and return a JWT.
 
+    Use email as the ``username`` field (required by OAuth2 spec).
+    """
+    user = await _authenticate(db, form.username, form.password)
     token = create_access_token({"sub": user.id, "email": user.email})
     return TokenResponse(access_token=token)
+
+
+class _JsonLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+@router.post(
+    "/token",
+    response_model=TokenResponse,
+    summary="Login with JSON body (email + password)",
+)
+async def login_json(
+    body: _JsonLoginRequest,
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
+    """Authenticate via JSON body ``{email, password}`` — convenience for API clients.
+
+    Equivalent to POST /auth/login but accepts JSON instead of form-data.
+    """
+    user = await _authenticate(db, body.email, body.password)
+    token = create_access_token({"sub": user.id, "email": user.email})
+    return TokenResponse(access_token=token)
+
+
+# Alias for legacy / Streamlit usage
+@router.post(
+    "/login/json",
+    response_model=TokenResponse,
+    include_in_schema=False,
+)
+async def login_json_alias(
+    body: _JsonLoginRequest,
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
+    return await login_json(body, db)
 
 
 @router.get("/me", response_model=UserOut)

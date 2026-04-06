@@ -165,6 +165,19 @@ pm2 start ecosystem.config.cjs
 #   데모 계정:  demo@tracecheck.io / TraceCheck2024!
 ```
 
+### 빠른 API 테스트
+
+```bash
+# JSON 로그인
+curl -X POST http://localhost:8000/api/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@tracecheck.io","password":"TraceCheck2024!"}'
+
+# 프로젝트 목록
+TOKEN=<위에서 받은 access_token>
+curl http://localhost:8000/api/projects/ -H "Authorization: Bearer $TOKEN"
+```
+
 ---
 
 ## ⚠️ 법적 고지 (Legal Disclaimer)
@@ -223,17 +236,58 @@ TraceCheck is a **pre-screening and evidence workflow support tool** for EU Defo
 
 ---
 
+## 샘플 데이터
+
+샘플 CSV 파일: [`examples/sample_plots.csv`](examples/sample_plots.csv)
+
+```
+plot_ref,supplier_name,commodity,country,latitude,longitude
+COL-001,Finca La Esperanza,coffee,CO,2.1234,-76.5432
+COL-002,Cooperativa del Sur,coffee,CO,1.8621,-76.4089
+IDN-001,PT Sawit Makmur,palm_oil,ID,-2.3456,113.4567
+...
+```
+
+> 대시보드 → 필지 업로드 → "샘플 CSV 다운로드" 버튼으로도 받을 수 있습니다.
+
+---
+
+## 데모 시나리오
+
+```
+1. demo@tracecheck.io / TraceCheck2024! 로 로그인
+2. 프로젝트 목록에서 "Colombia Coffee Q1-2024" 선택
+3. 필지 업로드 → examples/sample_plots.csv 업로드
+4. 분석 실행 → "🚀 분석 시작" 클릭
+5. 결과 보기 → LOW/REVIEW/HIGH 분포 차트 확인
+6. 증빙 내보내기 → JSON + CSV 다운로드
+7. 감사 이력 → 모든 작업 로그 확인
+```
+
+---
+
 ## 개발 상태
 
-- **버전**: 0.2.0-MVP (v2 SaaS 스키마)
-- **브랜치**: `eudr-mvp`  
-- **GitHub**: https://github.com/NIWS-shindongju/snn  
-- **라이선스**: MIT  
+- **버전**: 0.3.0-MVP (E2E 완성)
+- **브랜치**: `main`
+- **GitHub**: https://github.com/NIWS-shindongju/snn
+- **라이선스**: MIT
 - **마지막 업데이트**: 2026-04-06
+
+### v0.3.0 주요 변경사항
+- **JSON 로그인 엔드포인트 추가**: `POST /api/auth/token` (Streamlit 친화적)
+- **API 경로 통일**: `/assess` 별칭, `/export` 별칭 추가
+- **Streamlit 대시보드 전면 개선**:
+  - 7번째 페이지 "감사 이력" 추가
+  - 분석 중 자동 폴링 (3초 간격)
+  - 샘플 CSV 인라인 다운로드
+  - 검증 미리보기 / 업로드 분리 버튼
+  - 필지 삭제 버튼
+- **샘플 CSV**: `examples/sample_plots.csv` (15개 필지, 4개국, 4개 원자재)
+- **E2E 12단계 전체 검증 완료**: JSON 로그인 → 프로젝트 → 필지 → 분석 → 결과 → JSON/CSV 내보내기 → 감사 이력
 
 ### v0.2.0 주요 변경사항
 - **DB 스키마 v2**: `parcels→plots`, `analysis_jobs→job_runs`, `parcel_results→plot_assessments`, `reports→evidence_exports` + `audit_logs` 신규
 - **CRUD 전면 재작성**: 새 모델명에 맞게 crud.py 재작성
 - **감사 로그**: 모든 주요 액션(프로젝트 생성, 업로드, 분석 시작, 보고서 생성) 자동 기록
 - **API 호환성**: v1 경로(`/parcels`, `/parcel_ref`) → v2 경로(`/plots`, `/plot_ref`) + 구버전 alias 유지
-- **E2E 검증**: 로그인→프로젝트→분석 파이프라인→결과→증빙 내보내기 전 구간 통과

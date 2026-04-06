@@ -1,0 +1,16 @@
+plot_ref,supplier_name,commodity,country,latitude,longitude
+COL-001,Finca La Esperanza,coffee,CO,2.1234,-76.5432
+COL-002,Cooperativa del Sur,coffee,CO,1.8621,-76.4089
+COL-003,Hacienda Buena Vista,coffee,CO,2.4521,-76.2341
+COL-004,Familia Gutierrez,coffee,CO,1.6789,-75.9876
+COL-005,Finca San Pedro,coffee,CO,2.3012,-76.1234
+COL-006,Cooperativa Cauca,coffee,CO,1.9456,-76.3210
+COL-007,Finca El Paraiso,coffee,CO,2.0871,-76.6543
+COL-008,Comunidad Indigena,coffee,CO,1.7234,-75.8765
+IDN-001,PT Sawit Makmur,palm_oil,ID,-2.3456,113.4567
+IDN-002,Kebun Rakyat Kalimantan,palm_oil,ID,-1.9876,114.1234
+IDN-003,CV Agro Borneo,palm_oil,ID,-2.8765,112.9876
+GHA-001,Kwame Cocoa Farm,cocoa,GH,6.5432,-1.2345
+GHA-002,Ashanti Cooperative,cocoa,GH,7.1234,-1.8765
+BRA-001,Fazenda Amazonia,soy,BR,-8.4567,-53.2345
+BRA-002,Cooperativa Sul,soy,BR,-9.1234,-52.8765
