@@ -298,9 +298,12 @@ COL-002,Cooperativa del Sur,1.86,-76.41
                 )
             if resp.status_code in (200, 201):
                 data = resp.json()
+                # v2: created_count/skipped_count (v1: valid_count/invalid_count)
+                created = data.get('created_count', data.get('valid_count', 0))
+                skipped = data.get('skipped_count', data.get('invalid_count', 0))
                 st.success(
-                    f"✅ 업로드 완료: **{data.get('valid_count', 0)}개** 필지 저장, "
-                    f"**{data.get('invalid_count', 0)}개** 검증 실패"
+                    f"✅ 업로드 완료: **{created}개** 필지 저장, "
+                    f"**{skipped}개** 검증 실패"
                 )
                 if data.get("errors"):
                     with st.expander(f"⚠️ {len(data['errors'])}개 오류"):
@@ -314,22 +317,24 @@ COL-002,Cooperativa del Sur,1.86,-76.41
                 st.error(f"업로드 실패 ({resp.status_code}): {detail}")
 
     st.markdown("---")
-    # Show existing parcels
+    # Show existing plots
     st.subheader("현재 등록된 필지")
-    resp = api_get(f"/api/projects/{proj['id']}/parcels")
+    # v2: /plots endpoint (v1: /parcels)
+    resp = api_get(f"/api/projects/{proj['id']}/plots")
     if resp.status_code == 200:
-        parcels = resp.json()
-        if parcels:
+        plots = resp.json()
+        if plots:
             rows = []
-            for p in parcels:
+            for p in plots:
                 geom = json.loads(p.get("geojson", "{}"))
                 coords = geom.get("geometry", {}).get("coordinates", [])
                 if geom.get("geometry", {}).get("type") == "Point":
                     lat, lon = coords[1], coords[0]
                 else:
                     lat, lon = "poly", "poly"
+                # v2: plot_ref (v1: parcel_ref)
                 rows.append({
-                    "Ref": p.get("parcel_ref", "-"),
+                    "Ref": p.get("plot_ref") or p.get("parcel_ref", "-"),
                     "공급업체": p.get("supplier_name", "-"),
                     "유형": p.get("geometry_type", "-"),
                     "위도": lat,
@@ -338,7 +343,7 @@ COL-002,Cooperativa del Sur,1.86,-76.41
                     "국가": p.get("country", "-"),
                 })
             st.dataframe(pd.DataFrame(rows), use_container_width=True)
-            st.caption(f"총 **{len(parcels)}개** 필지 등록")
+            st.caption(f"총 **{len(plots)}개** 필지 등록")
         else:
             st.info("등록된 필지가 없습니다.")
     else:
@@ -357,8 +362,8 @@ def page_analysis() -> None:
 
     st.info(f"📂 현재 프로젝트: **{proj['name']}**")
 
-    # Parcel count
-    count_resp = api_get(f"/api/projects/{proj['id']}/parcels")
+    # Plot count
+    count_resp = api_get(f"/api/projects/{proj['id']}/plots")
     parcel_count = len(count_resp.json()) if count_resp.status_code == 200 else "?"
 
     col1, col2, col3 = st.columns(3)
@@ -405,10 +410,16 @@ def page_analysis() -> None:
                     with c2:
                         st.metric("상태", status.upper())
                     with c3:
+                        # v2: total_plots/processed_plots (v1: total_parcels/processed_parcels)
+                        total_p = job.get('total_plots', job.get('total_parcels', 0))
+                        processed_p = job.get('processed_plots', job.get('processed_parcels', 0))
                         if status == "running":
-                            st.progress(progress, text=f"{job.get('processed_parcels',0)}/{job.get('total_parcels',0)}")
+                            st.progress(
+                                processed_p / total_p if total_p > 0 else 0,
+                                text=f"{processed_p}/{total_p}"
+                            )
                         else:
-                            st.metric("처리 완료", f"{job.get('processed_parcels',0)}/{job.get('total_parcels',0)}")
+                            st.metric("처리 완료", f"{processed_p}/{total_p}")
                     with c4:
                         if st.button("결과 보기", key=f"view_{job['id']}"):
                             st.session_state["view_job_id"] = job["id"]
@@ -495,7 +506,8 @@ def page_results() -> None:
                 icon = RISK_COLOURS.get(risk, "⚪")
                 rows.append({
                     "위험도": f"{icon} {risk.upper()}",
-                    "필지 Ref": r.get("parcel_ref") or r.get("parcel_id", "")[:8],
+                    # v2: plot_ref/plot_id (v1: parcel_ref/parcel_id)
+                    "필지 Ref": r.get("plot_ref") or r.get("parcel_ref") or r.get("plot_id", r.get("parcel_id", ""))[:8],
                     "공급업체": r.get("supplier_name", "-"),
                     "dNDVI": f"{r.get('delta_ndvi', 0):.3f}" if r.get("delta_ndvi") else "-",
                     "변화면적(ha)": f"{r.get('changed_area_ha', 0):.2f}" if r.get("changed_area_ha") else "-",

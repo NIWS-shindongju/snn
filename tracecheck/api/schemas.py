@@ -1,9 +1,9 @@
-"""Pydantic request/response schemas for TraceCheck API."""
+"""Pydantic request/response schemas for TraceCheck API — v2 SaaS schema."""
 
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -15,7 +15,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
-    org_name: str | None = None
+    org_name: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -31,7 +31,7 @@ class TokenResponse(BaseModel):
 class UserOut(BaseModel):
     id: str
     email: str
-    org_name: str | None
+    org_name: Optional[str]
     is_active: bool
     created_at: datetime
 
@@ -50,8 +50,8 @@ VALID_COMMODITIES = {
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     commodity: str = Field(default="coffee")
-    description: str | None = None
-    origin_country: str | None = Field(None, max_length=10)
+    description: Optional[str] = None
+    origin_country: Optional[str] = Field(None, max_length=10)
     cutoff_date: str = Field(default="2020-12-31")
 
     @field_validator("commodity")
@@ -66,39 +66,41 @@ class ProjectOut(BaseModel):
     id: str
     name: str
     commodity: str
-    description: str | None
-    origin_country: str | None
+    description: Optional[str]
+    origin_country: Optional[str]
     cutoff_date: str
     status: str
     created_at: datetime
-    parcel_count: int = 0
+    plot_count: int = 0  # injected by route handler
 
     model_config = {"from_attributes": True}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Parcel
+# Plot  (formerly "Parcel")
 # ─────────────────────────────────────────────────────────────────────────────
 
-class ParcelOut(BaseModel):
+class PlotOut(BaseModel):
     id: str
     project_id: str
-    supplier_name: str | None
-    parcel_ref: str | None
+    supplier_name: Optional[str]
+    plot_ref: Optional[str]
     geometry_type: str
     geojson: str
-    area_ha: float | None
-    country: str | None
+    area_ha: Optional[float]
+    country: Optional[str]
+    validation_status: str
+    validation_error: Optional[str]
     uploaded_at: datetime
 
     model_config = {"from_attributes": True}
 
 
 class UploadSummary(BaseModel):
-    valid_count: int
-    invalid_count: int
+    created_count: int
+    skipped_count: int
     errors: list[dict[str, Any]] = []
-    parcel_ids: list[str] = []
+    plot_ids: list[str] = []
 
 
 class ValidationPreview(BaseModel):
@@ -109,45 +111,62 @@ class ValidationPreview(BaseModel):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Analysis Job
+# Job Run  (formerly "AnalysisJob")
 # ─────────────────────────────────────────────────────────────────────────────
 
-class JobOut(BaseModel):
+class JobRunOut(BaseModel):
     id: str
     project_id: str
     status: str
-    total_parcels: int
-    processed_parcels: int
-    error_message: str | None
-    started_at: datetime | None
-    completed_at: datetime | None
+    total_plots: int
+    processed_plots: int
+    data_mode: str
+    error_message: Optional[str]
+    started_at: Optional[datetime]
+    completed_at: Optional[datetime]
     created_at: datetime
 
     model_config = {"from_attributes": True}
 
 
-class ParcelResultOut(BaseModel):
+# ─────────────────────────────────────────────────────────────────────────────
+# Plot Assessment  (formerly "ParcelResult")
+# ─────────────────────────────────────────────────────────────────────────────
+
+class PlotAssessmentOut(BaseModel):
     id: str
-    job_id: str
-    parcel_id: str
-    parcel_ref: str | None = None
-    supplier_name: str | None = None
+    job_run_id: str
+    plot_id: str
+    # Enriched from Plot relationship:
+    plot_ref: Optional[str] = None
+    supplier_name: Optional[str] = None
+    # Risk classification
     risk_level: str
-    delta_ndvi: float | None
-    changed_area_ha: float | None
-    cloud_fraction: float | None
-    confidence: float | None
-    flag_reason: str | None
-    before_scene_date: str | None
-    after_scene_date: str | None
+    # Spectral metrics
+    ndvi_before: Optional[float]
+    ndvi_after: Optional[float]
+    delta_ndvi: Optional[float]
+    nbr_before: Optional[float]
+    nbr_after: Optional[float]
+    delta_nbr: Optional[float]
+    changed_area_ha: Optional[float]
+    cloud_fraction: Optional[float]
+    confidence: Optional[float]
+    flag_reason: Optional[str]
+    # Scene info
+    before_scene_date: Optional[str]
+    after_scene_date: Optional[str]
     data_source: str
-    analyzed_at: datetime
+    # Reviewer override
+    reviewer_decision: Optional[str]
+    reviewer_note: Optional[str]
+    assessed_at: datetime
 
     model_config = {"from_attributes": True}
 
 
-class ResultsSummary(BaseModel):
-    job_id: str
+class AssessmentsSummary(BaseModel):
+    job_run_id: str
     status: str
     total: int
     low: int
@@ -159,10 +178,10 @@ class ResultsSummary(BaseModel):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Report
+# Evidence Export  (formerly "Report")
 # ─────────────────────────────────────────────────────────────────────────────
 
-class ReportRequest(BaseModel):
+class ExportRequest(BaseModel):
     format: str = Field(default="json")
 
     @field_validator("format")
@@ -173,11 +192,39 @@ class ReportRequest(BaseModel):
         return v
 
 
-class ReportOut(BaseModel):
+class EvidenceExportOut(BaseModel):
     id: str
-    job_id: str
+    job_run_id: str
     format: str
-    file_size_bytes: int | None
+    file_size_bytes: Optional[int]
+    summary_snapshot: Optional[Any]
     generated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Audit Log
+# ─────────────────────────────────────────────────────────────────────────────
+
+class AuditLogOut(BaseModel):
+    id: str
+    project_id: str
+    user_id: str
+    action: str
+    detail: Optional[Any]
+    ip_address: Optional[str]
+    occurred_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Backwards-compat aliases (for code still using old names)
+# ─────────────────────────────────────────────────────────────────────────────
+ParcelOut = PlotOut
+JobOut = JobRunOut
+ParcelResultOut = PlotAssessmentOut
+ResultsSummary = AssessmentsSummary
+ReportOut = EvidenceExportOut
+ReportRequest = ExportRequest

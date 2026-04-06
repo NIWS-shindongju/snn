@@ -1,51 +1,58 @@
-"""Async CRUD helpers for TraceCheck ORM models."""
+"""TraceCheck CRUD helpers — v2 SaaS schema.
+
+All operations use async SQLAlchemy sessions.
+Table names: users, projects, plots, job_runs, plot_assessments,
+             evidence_exports, audit_logs
+"""
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from tracecheck.db.models import (
-    AnalysisJob,
-    Parcel,
-    ParcelResult,
+    AuditLog,
+    EvidenceExport,
+    JobRun,
+    Plot,
+    PlotAssessment,
     Project,
-    Report,
     User,
 )
 
+logger = logging.getLogger(__name__)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# User
-# ─────────────────────────────────────────────────────────────────────────────
 
-async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
+# ─── users ────────────────────────────────────────────────────────────────────
+
+async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
     result = await db.execute(select(User).where(User.email == email))
     return result.scalar_one_or_none()
 
 
-async def get_user_by_id(db: AsyncSession, user_id: str) -> User | None:
+async def get_user_by_id(db: AsyncSession, user_id: str) -> Optional[User]:
     result = await db.execute(select(User).where(User.id == user_id))
     return result.scalar_one_or_none()
 
 
 async def create_user(
-    db: AsyncSession, email: str, hashed_password: str, org_name: str | None = None
+    db: AsyncSession,
+    email: str,
+    hashed_password: str,
+    org_name: Optional[str] = None,
 ) -> User:
     user = User(email=email, hashed_password=hashed_password, org_name=org_name)
     db.add(user)
     await db.flush()
-    await db.refresh(user)
     return user
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Project
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── projects ─────────────────────────────────────────────────────────────────
 
 async def list_projects(db: AsyncSession, owner_id: str) -> list[Project]:
     result = await db.execute(
@@ -56,10 +63,13 @@ async def list_projects(db: AsyncSession, owner_id: str) -> list[Project]:
     return list(result.scalars().all())
 
 
-async def get_project(db: AsyncSession, project_id: str, owner_id: str) -> Project | None:
-    result = await db.execute(
-        select(Project).where(Project.id == project_id, Project.owner_id == owner_id)
-    )
+async def get_project(
+    db: AsyncSession, project_id: str, owner_id: Optional[str] = None
+) -> Optional[Project]:
+    q = select(Project).where(Project.id == project_id)
+    if owner_id:
+        q = q.where(Project.owner_id == owner_id)
+    result = await db.execute(q)
     return result.scalar_one_or_none()
 
 
@@ -67,128 +77,134 @@ async def create_project(
     db: AsyncSession,
     owner_id: str,
     name: str,
-    commodity: str,
-    description: str | None = None,
-    origin_country: str | None = None,
+    commodity: str = "coffee",
+    origin_country: Optional[str] = None,
     cutoff_date: str = "2020-12-31",
+    description: Optional[str] = None,
 ) -> Project:
     project = Project(
         owner_id=owner_id,
         name=name,
         commodity=commodity,
-        description=description,
         origin_country=origin_country,
         cutoff_date=cutoff_date,
+        description=description,
     )
     db.add(project)
     await db.flush()
-    await db.refresh(project)
     return project
 
 
-async def delete_project(db: AsyncSession, project_id: str, owner_id: str) -> bool:
-    project = await get_project(db, project_id, owner_id)
+async def delete_project(db: AsyncSession, project_id: str) -> bool:
+    project = await get_project(db, project_id)
     if not project:
         return False
     await db.delete(project)
+    await db.flush()
     return True
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Parcel
-# ─────────────────────────────────────────────────────────────────────────────
-
-async def list_parcels(db: AsyncSession, project_id: str) -> list[Parcel]:
+async def count_plots(db: AsyncSession, project_id: str) -> int:
     result = await db.execute(
-        select(Parcel)
-        .where(Parcel.project_id == project_id)
-        .order_by(Parcel.uploaded_at.asc())
+        select(func.count()).select_from(Plot).where(Plot.project_id == project_id)
+    )
+    return result.scalar() or 0
+
+
+# ─── plots ────────────────────────────────────────────────────────────────────
+
+async def list_plots(db: AsyncSession, project_id: str) -> list[Plot]:
+    result = await db.execute(
+        select(Plot).where(Plot.project_id == project_id).order_by(Plot.uploaded_at)
     )
     return list(result.scalars().all())
 
 
-async def get_parcel(db: AsyncSession, parcel_id: str) -> Parcel | None:
-    result = await db.execute(select(Parcel).where(Parcel.id == parcel_id))
+async def get_plot(db: AsyncSession, plot_id: str) -> Optional[Plot]:
+    result = await db.execute(select(Plot).where(Plot.id == plot_id))
     return result.scalar_one_or_none()
 
 
-async def create_parcels_bulk(db: AsyncSession, parcels: list[dict[str, Any]]) -> list[Parcel]:
-    """Bulk insert validated parcels."""
-    orm_parcels = [Parcel(**p) for p in parcels]
-    db.add_all(orm_parcels)
+async def create_plots_bulk(
+    db: AsyncSession,
+    project_id: str,
+    plots_data: list[dict[str, Any]],
+) -> list[Plot]:
+    """Bulk-insert plot records. Returns list of created Plot objects."""
+    plots = []
+    for d in plots_data:
+        plot = Plot(project_id=project_id, **d)
+        db.add(plot)
+        plots.append(plot)
     await db.flush()
-    for p in orm_parcels:
-        await db.refresh(p)
-    return orm_parcels
+    return plots
 
 
-async def delete_parcel(db: AsyncSession, parcel_id: str) -> bool:
-    parcel = await get_parcel(db, parcel_id)
-    if not parcel:
+async def delete_plot(db: AsyncSession, plot_id: str) -> bool:
+    plot = await get_plot(db, plot_id)
+    if not plot:
         return False
-    await db.delete(parcel)
+    await db.delete(plot)
+    await db.flush()
     return True
 
 
-async def count_parcels(db: AsyncSession, project_id: str) -> int:
-    result = await db.execute(
-        select(func.count()).where(Parcel.project_id == project_id)
-    )
-    return result.scalar_one()
+# ─── job_runs ─────────────────────────────────────────────────────────────────
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# AnalysisJob
-# ─────────────────────────────────────────────────────────────────────────────
-
-async def create_job(
-    db: AsyncSession, project_id: str, triggered_by: str, total_parcels: int
-) -> AnalysisJob:
-    job = AnalysisJob(
+async def create_job_run(
+    db: AsyncSession,
+    project_id: str,
+    triggered_by: str,
+    total_plots: int = 0,
+    data_mode: str = "mock",
+) -> JobRun:
+    job = JobRun(
         project_id=project_id,
         triggered_by=triggered_by,
-        total_parcels=total_parcels,
-        status="pending",
+        total_plots=total_plots,
+        data_mode=data_mode,
     )
     db.add(job)
     await db.flush()
-    await db.refresh(job)
     return job
 
 
-async def get_job(db: AsyncSession, job_id: str) -> AnalysisJob | None:
-    result = await db.execute(
-        select(AnalysisJob)
-        .where(AnalysisJob.id == job_id)
-        .options(selectinload(AnalysisJob.results).selectinload(ParcelResult.parcel))
-    )
+async def get_job_run(
+    db: AsyncSession, job_id: str, load_assessments: bool = False
+) -> Optional[JobRun]:
+    q = select(JobRun).where(JobRun.id == job_id)
+    if load_assessments:
+        q = q.options(
+            selectinload(JobRun.plot_assessments).selectinload(PlotAssessment.plot)
+        )
+    result = await db.execute(q)
     return result.scalar_one_or_none()
 
 
-async def list_jobs(db: AsyncSession, project_id: str) -> list[AnalysisJob]:
+async def list_job_runs(db: AsyncSession, project_id: str) -> list[JobRun]:
     result = await db.execute(
-        select(AnalysisJob)
-        .where(AnalysisJob.project_id == project_id)
-        .order_by(AnalysisJob.created_at.desc())
+        select(JobRun)
+        .where(JobRun.project_id == project_id)
+        .order_by(JobRun.created_at.desc())
     )
     return list(result.scalars().all())
 
 
-async def update_job_status(
+async def update_job_run_status(
     db: AsyncSession,
     job_id: str,
     status: str,
-    error_message: str | None = None,
-    processed_parcels: int | None = None,
+    processed_plots: Optional[int] = None,
+    error_message: Optional[str] = None,
 ) -> None:
-    job = await db.get(AnalysisJob, job_id)
+    job = await get_job_run(db, job_id)
     if not job:
         return
     job.status = status
+    if processed_plots is not None:
+        job.processed_plots = processed_plots
     if error_message is not None:
         job.error_message = error_message
-    if processed_parcels is not None:
-        job.processed_parcels = processed_parcels
     if status == "running" and job.started_at is None:
         job.started_at = datetime.now(timezone.utc)
     if status in ("done", "failed"):
@@ -196,66 +212,131 @@ async def update_job_status(
     await db.flush()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ParcelResult
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── plot_assessments ─────────────────────────────────────────────────────────
 
-async def save_parcel_result(db: AsyncSession, data: dict[str, Any]) -> ParcelResult:
-    result_obj = ParcelResult(**data)
-    db.add(result_obj)
+async def save_plot_assessment(
+    db: AsyncSession,
+    job_run_id: str,
+    plot_id: str,
+    risk_level: str,
+    metrics: dict[str, Any],
+) -> PlotAssessment:
+    pa = PlotAssessment(
+        job_run_id=job_run_id,
+        plot_id=plot_id,
+        risk_level=risk_level,
+        **metrics,
+    )
+    db.add(pa)
     await db.flush()
-    await db.refresh(result_obj)
-    return result_obj
+    return pa
 
 
-async def list_results(db: AsyncSession, job_id: str) -> list[ParcelResult]:
+async def list_assessments(
+    db: AsyncSession, job_run_id: str, risk_level: Optional[str] = None
+) -> list[PlotAssessment]:
+    q = (
+        select(PlotAssessment)
+        .where(PlotAssessment.job_run_id == job_run_id)
+        .options(selectinload(PlotAssessment.plot))
+        .order_by(PlotAssessment.assessed_at)
+    )
+    if risk_level:
+        q = q.where(PlotAssessment.risk_level == risk_level)
+    result = await db.execute(q)
+    return list(result.scalars().all())
+
+
+async def get_assessments_summary(
+    db: AsyncSession, job_run_id: str
+) -> dict[str, int]:
     result = await db.execute(
-        select(ParcelResult)
-        .where(ParcelResult.job_id == job_id)
-        .options(selectinload(ParcelResult.parcel))
-        .order_by(ParcelResult.analyzed_at.asc())
+        select(PlotAssessment.risk_level, func.count().label("cnt"))
+        .where(PlotAssessment.job_run_id == job_run_id)
+        .group_by(PlotAssessment.risk_level)
+    )
+    rows = result.all()
+    counts = {"low": 0, "review": 0, "high": 0}
+    for row in rows:
+        if row.risk_level in counts:
+            counts[row.risk_level] = row.cnt
+    counts["total"] = sum(counts.values())
+    return counts
+
+
+# ─── evidence_exports ─────────────────────────────────────────────────────────
+
+async def create_evidence_export(
+    db: AsyncSession,
+    job_run_id: str,
+    created_by: str,
+    fmt: str,
+    file_path: Optional[str] = None,
+    file_size: Optional[int] = None,
+    summary_snapshot: Optional[Any] = None,
+) -> EvidenceExport:
+    export = EvidenceExport(
+        job_run_id=job_run_id,
+        created_by=created_by,
+        format=fmt,
+        file_path=file_path,
+        file_size_bytes=file_size,
+        summary_snapshot=summary_snapshot,
+    )
+    db.add(export)
+    await db.flush()
+    return export
+
+
+async def get_evidence_export(
+    db: AsyncSession, export_id: str
+) -> Optional[EvidenceExport]:
+    result = await db.execute(
+        select(EvidenceExport).where(EvidenceExport.id == export_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def list_evidence_exports(
+    db: AsyncSession, job_run_id: str
+) -> list[EvidenceExport]:
+    result = await db.execute(
+        select(EvidenceExport)
+        .where(EvidenceExport.job_run_id == job_run_id)
+        .order_by(EvidenceExport.generated_at.desc())
     )
     return list(result.scalars().all())
 
 
-async def get_results_summary(db: AsyncSession, job_id: str) -> dict[str, int]:
-    """Return count of each risk level for a job."""
-    result = await db.execute(
-        select(ParcelResult.risk_level, func.count().label("cnt"))
-        .where(ParcelResult.job_id == job_id)
-        .group_by(ParcelResult.risk_level)
+# ─── audit_logs ───────────────────────────────────────────────────────────────
+
+async def log_action(
+    db: AsyncSession,
+    project_id: str,
+    user_id: str,
+    action: str,
+    detail: Optional[Any] = None,
+    ip_address: Optional[str] = None,
+) -> AuditLog:
+    entry = AuditLog(
+        project_id=project_id,
+        user_id=user_id,
+        action=action,
+        detail=detail,
+        ip_address=ip_address,
     )
-    rows = result.all()
-    summary = {"low": 0, "review": 0, "high": 0, "total": 0}
-    for row in rows:
-        level = row.risk_level
-        if level in summary:
-            summary[level] = row.cnt
-        summary["total"] += row.cnt
-    return summary
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Report
-# ─────────────────────────────────────────────────────────────────────────────
-
-async def create_report(
-    db: AsyncSession, job_id: str, fmt: str, file_path: str, file_size: int
-) -> Report:
-    report = Report(job_id=job_id, format=fmt, file_path=file_path, file_size_bytes=file_size)
-    db.add(report)
+    db.add(entry)
     await db.flush()
-    await db.refresh(report)
-    return report
+    return entry
 
 
-async def get_report(db: AsyncSession, report_id: str) -> Report | None:
-    result = await db.execute(select(Report).where(Report.id == report_id))
-    return result.scalar_one_or_none()
-
-
-async def list_reports(db: AsyncSession, job_id: str) -> list[Report]:
+async def list_audit_logs(
+    db: AsyncSession, project_id: str, limit: int = 100
+) -> list[AuditLog]:
     result = await db.execute(
-        select(Report).where(Report.job_id == job_id).order_by(Report.generated_at.desc())
+        select(AuditLog)
+        .where(AuditLog.project_id == project_id)
+        .order_by(AuditLog.occurred_at.desc())
+        .limit(limit)
     )
     return list(result.scalars().all())

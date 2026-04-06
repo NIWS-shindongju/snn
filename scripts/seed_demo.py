@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tracecheck.api.auth import hash_password
 from tracecheck.config import settings
-from tracecheck.db.models import Base, User, Project, Parcel
+from tracecheck.db.models import Base, User, Project, Plot
 from tracecheck.db.session import engine, AsyncSessionLocal
 
 
@@ -44,11 +44,11 @@ DEMO_PROJECT = {
     "cutoff_date": "2020-12-31",
 }
 
-# Sample parcels in Colombia's coffee belt (Huila/Nariño region)
-DEMO_PARCELS = [
+# Sample plots in Colombia's coffee belt (Huila/Nariño region)
+DEMO_PLOTS = [
     {
         "supplier_name": "Finca La Esperanza",
-        "parcel_ref": "COL-001",
+        "plot_ref": "COL-001",
         "geometry_type": "point",
         "geojson": json.dumps({
             "type": "Feature",
@@ -61,7 +61,7 @@ DEMO_PARCELS = [
     },
     {
         "supplier_name": "Cooperativa del Sur",
-        "parcel_ref": "COL-002",
+        "plot_ref": "COL-002",
         "geometry_type": "polygon",
         "geojson": json.dumps({
             "type": "Feature",
@@ -81,7 +81,7 @@ DEMO_PARCELS = [
     },
     {
         "supplier_name": "Finca Montaña Verde",
-        "parcel_ref": "COL-003",
+        "plot_ref": "COL-003",
         "geometry_type": "point",
         "geojson": json.dumps({
             "type": "Feature",
@@ -94,7 +94,7 @@ DEMO_PARCELS = [
     },
     {
         "supplier_name": "Hacienda Bella Vista",
-        "parcel_ref": "COL-004",
+        "plot_ref": "COL-004",
         "geometry_type": "point",
         "geojson": json.dumps({
             "type": "Feature",
@@ -107,7 +107,7 @@ DEMO_PARCELS = [
     },
     {
         "supplier_name": "Empresa Agro San Juan",
-        "parcel_ref": "COL-005",
+        "plot_ref": "COL-005",
         "geometry_type": "polygon",
         "geojson": json.dumps({
             "type": "Feature",
@@ -137,10 +137,10 @@ DEMO_PROJECT_2 = {
     "cutoff_date": "2020-12-31",
 }
 
-DEMO_PARCELS_2 = [
+DEMO_PLOTS_2 = [
     {
         "supplier_name": "PT Sawit Kalimantan",
-        "parcel_ref": "IDN-001",
+        "plot_ref": "IDN-001",
         "geometry_type": "point",
         "geojson": json.dumps({
             "type": "Feature",
@@ -153,7 +153,7 @@ DEMO_PARCELS_2 = [
     },
     {
         "supplier_name": "Agro Indo Resources",
-        "parcel_ref": "IDN-002",
+        "plot_ref": "IDN-002",
         "geometry_type": "point",
         "geojson": json.dumps({
             "type": "Feature",
@@ -218,17 +218,17 @@ async def seed(db: AsyncSession) -> None:
     else:
         print(f"  Project already exists: {project.name}")
 
-    # Add coffee parcels
-    result = await db.execute(select(Parcel).where(Parcel.project_id == project.id))
+    # Add coffee plots
+    result = await db.execute(select(Plot).where(Plot.project_id == project.id))
     existing_count = len(result.scalars().all())
     if existing_count == 0:
-        for p_data in DEMO_PARCELS:
-            parcel = Parcel(project_id=project.id, **p_data)
-            db.add(parcel)
+        for p_data in DEMO_PLOTS:
+            plot = Plot(project_id=project.id, **p_data)
+            db.add(plot)
         await db.flush()
-        print(f"  ✓ Inserted {len(DEMO_PARCELS)} coffee parcels")
+        print(f"  ✓ Inserted {len(DEMO_PLOTS)} coffee plots")
     else:
-        print(f"  Parcels already exist ({existing_count})")
+        print(f"  Plots already exist ({existing_count})")
 
     # ── Project 2: Palm oil ───────────────────────────────────────────────────
     result = await db.execute(
@@ -247,16 +247,16 @@ async def seed(db: AsyncSession) -> None:
     else:
         print(f"  Project already exists: {project2.name}")
 
-    result = await db.execute(select(Parcel).where(Parcel.project_id == project2.id))
+    result = await db.execute(select(Plot).where(Plot.project_id == project2.id))
     existing_count2 = len(result.scalars().all())
     if existing_count2 == 0:
-        for p_data in DEMO_PARCELS_2:
-            parcel = Parcel(project_id=project2.id, **p_data)
-            db.add(parcel)
+        for p_data in DEMO_PLOTS_2:
+            plot = Plot(project_id=project2.id, **p_data)
+            db.add(plot)
         await db.flush()
-        print(f"  ✓ Inserted {len(DEMO_PARCELS_2)} palm oil parcels")
+        print(f"  ✓ Inserted {len(DEMO_PLOTS_2)} palm oil plots")
     else:
-        print(f"  Parcels already exist ({existing_count2})")
+        print(f"  Plots already exist ({existing_count2})")
 
     await db.commit()
     print("\n🎉 Demo seed complete!")

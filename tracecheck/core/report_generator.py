@@ -54,21 +54,31 @@ def generate_json_report(
     def pct(n: int) -> float:
         return round(n / total * 100, 1) if total > 0 else 0.0
 
-    parcel_list = []
+    plot_list = []
     for r in results:
-        parcel = r.parcel if hasattr(r, "parcel") and r.parcel else None
+        # v2: r.plot (was r.parcel)
+        plot = (
+            r.plot if hasattr(r, "plot") and r.plot
+            else r.parcel if hasattr(r, "parcel") and r.parcel
+            else None
+        )
         geojson = None
-        if parcel:
+        if plot:
             try:
-                geojson = json.loads(parcel.geojson).get("geometry")
+                geojson = json.loads(plot.geojson).get("geometry")
             except Exception:
                 pass
 
-        parcel_list.append({
-            "parcel_id": r.parcel_id,
-            "parcel_ref": getattr(parcel, "parcel_ref", None) if parcel else None,
-            "supplier_name": getattr(parcel, "supplier_name", None) if parcel else None,
-            "country": getattr(parcel, "country", None) if parcel else None,
+        # Support both v1 (parcel_id/parcel_ref) and v2 (plot_id/plot_ref) field names
+        plot_id = getattr(r, "plot_id", None) or getattr(r, "parcel_id", None)
+        plot_ref = getattr(plot, "plot_ref", None) or getattr(plot, "parcel_ref", None)
+        ts = getattr(r, "assessed_at", None) or getattr(r, "analyzed_at", None)
+
+        plot_list.append({
+            "plot_id": plot_id,
+            "plot_ref": plot_ref,
+            "supplier_name": getattr(plot, "supplier_name", None) if plot else None,
+            "country": getattr(plot, "country", None) if plot else None,
             "geometry": geojson,
             "risk_level": r.risk_level,
             "delta_ndvi": r.delta_ndvi,
@@ -79,13 +89,13 @@ def generate_json_report(
             "before_scene_date": r.before_scene_date,
             "after_scene_date": r.after_scene_date,
             "data_source": r.data_source,
-            "analyzed_at": r.analyzed_at.isoformat() if r.analyzed_at else None,
+            "assessed_at": ts.isoformat() if ts else None,
         })
 
     report = {
         "report_meta": {
             "tool": "TraceCheck",
-            "tool_version": "0.1.0",
+            "tool_version": "0.2.0",
             "report_type": "EUDR_DUE_DILIGENCE_PRESCREENING",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "generated_by": getattr(user, "email", "unknown"),
@@ -99,7 +109,7 @@ def generate_json_report(
             "cutoff_date": project.cutoff_date,
         },
         "analysis": {
-            "job_id": job.id,
+            "job_run_id": job.id,
             "status": job.status,
             "started_at": job.started_at.isoformat() if job.started_at else None,
             "completed_at": job.completed_at.isoformat() if job.completed_at else None,
@@ -107,7 +117,7 @@ def generate_json_report(
             "eudr_cutoff_date": project.cutoff_date,
         },
         "summary": {
-            "total_parcels": total,
+            "total_plots": total,
             "low": summary["low"],
             "review": summary["review"],
             "high": summary["high"],
@@ -115,7 +125,7 @@ def generate_json_report(
             "review_pct": pct(summary["review"]),
             "high_pct": pct(summary["high"]),
         },
-        "parcels": parcel_list,
+        "plots": plot_list,
         "disclaimer": {
             "en": DISCLAIMER_EN,
             "ko": DISCLAIMER_KO,
@@ -143,23 +153,30 @@ def generate_json_report(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def generate_csv_report(results: list[Any], output_path: Path) -> None:
-    """Generate a flat CSV of all parcel results."""
+    """Generate a flat CSV of all plot assessment results."""
     fieldnames = [
-        "parcel_ref", "supplier_name", "country",
+        "plot_ref", "supplier_name", "country",
         "risk_level", "delta_ndvi", "changed_area_ha",
         "cloud_fraction", "confidence", "flag_reason",
-        "before_scene_date", "after_scene_date", "data_source", "analyzed_at",
+        "before_scene_date", "after_scene_date", "data_source", "assessed_at",
     ]
 
     with output_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         for r in results:
-            parcel = r.parcel if hasattr(r, "parcel") and r.parcel else None
+            # v2: r.plot (was r.parcel)
+            plot = (
+                r.plot if hasattr(r, "plot") and r.plot
+                else r.parcel if hasattr(r, "parcel") and r.parcel
+                else None
+            )
+            plot_ref = getattr(plot, "plot_ref", None) or getattr(plot, "parcel_ref", None)
+            ts = getattr(r, "assessed_at", None) or getattr(r, "analyzed_at", None)
             writer.writerow({
-                "parcel_ref": getattr(parcel, "parcel_ref", "") if parcel else "",
-                "supplier_name": getattr(parcel, "supplier_name", "") if parcel else "",
-                "country": getattr(parcel, "country", "") if parcel else "",
+                "plot_ref": plot_ref or "",
+                "supplier_name": getattr(plot, "supplier_name", "") if plot else "",
+                "country": getattr(plot, "country", "") if plot else "",
                 "risk_level": r.risk_level,
                 "delta_ndvi": r.delta_ndvi,
                 "changed_area_ha": r.changed_area_ha,
@@ -169,7 +186,7 @@ def generate_csv_report(results: list[Any], output_path: Path) -> None:
                 "before_scene_date": r.before_scene_date or "",
                 "after_scene_date": r.after_scene_date or "",
                 "data_source": r.data_source,
-                "analyzed_at": r.analyzed_at.isoformat() if r.analyzed_at else "",
+                "assessed_at": ts.isoformat() if ts else "",
             })
 
 
@@ -272,14 +289,20 @@ def _generate_pdf_with_reportlab(
     # ── Parcel details (show HIGH and REVIEW) ─────────────────────────────────
     flagged = [r for r in results if r.risk_level in ("high", "review")]
     if flagged:
-        story.append(Paragraph("Flagged Parcels Requiring Review", styles["Heading2"]))
-        parcel_data = [["Parcel Ref", "Supplier", "Country", "Risk", "dNDVI", "Area (ha)", "Reason"]]
+        story.append(Paragraph("Flagged Plots Requiring Review", styles["Heading2"]))
+        parcel_data = [["Plot Ref", "Supplier", "Country", "Risk", "dNDVI", "Area (ha)", "Reason"]]
         for r in flagged[:100]:  # max 100 rows in PDF
-            parcel = r.parcel if hasattr(r, "parcel") and r.parcel else None
+            plot = (
+                r.plot if hasattr(r, "plot") and r.plot
+                else r.parcel if hasattr(r, "parcel") and r.parcel
+                else None
+            )
+            plot_ref = getattr(plot, "plot_ref", None) or getattr(plot, "parcel_ref", None)
+            plot_id_short = getattr(r, "plot_id", getattr(r, "parcel_id", "?"))[:8]
             parcel_data.append([
-                getattr(parcel, "parcel_ref", r.parcel_id[:8]) or r.parcel_id[:8],
-                (getattr(parcel, "supplier_name", "") or "")[:20],
-                getattr(parcel, "country", "") or "",
+                plot_ref or plot_id_short,
+                (getattr(plot, "supplier_name", "") or "")[:20],
+                getattr(plot, "country", "") or "",
                 r.risk_level.upper(),
                 f"{r.delta_ndvi:.3f}" if r.delta_ndvi is not None else "N/A",
                 f"{r.changed_area_ha:.2f}" if r.changed_area_ha is not None else "N/A",

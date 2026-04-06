@@ -1,214 +1,239 @@
-# TraceCheck — EUDR 공급망 사전점검 SaaS
+# TraceCheck
 
-> **EUDR(EU Deforestation Regulation) 대응 위성 기반 산림전용 리스크 사전스크리닝 도구**  
-> 기존 SpikeEO/CarbonSNN 자산(Sentinel-2 변화탐지, 규칙 기반 분석) 재사용, 별도 SNN 학습 불필요
+**EUDR 공급망 실사 사전점검 및 증빙 관리 SaaS**
 
----
-
-## 🎯 제품 정의 (One-liner)
-
-> "CSV/GeoJSON으로 공급업체 필지를 업로드하면 Sentinel-2 변화탐지로 EUDR 산림전용 리스크를 LOW/REVIEW/HIGH로 자동 분류하고, 증빙 보고서(PDF/JSON/CSV)를 즉시 다운로드할 수 있는 SaaS"
+> 수입·물류 기업의 EUDR(EU 산림전용방지 규정) 의무 이행을 위해  
+> 공급업체 필지의 위성 기반 산림전용 리스크를 자동 스크리닝하고  
+> 규제 당국 제출용 증빙 패키지를 즉시 생성합니다.
 
 ---
 
-## ✅ 현재 완성된 기능
+## 이 제품이 해결하는 문제
 
-| 기능 | 상태 | 설명 |
-|------|------|------|
-| JWT 인증 | ✅ | 회원가입/로그인/토큰 갱신 |
-| 프로젝트 관리 | ✅ | EUDR 규제 원자재 기준 프로젝트 생성/조회/삭제 |
-| 필지 업로드 | ✅ | CSV/GeoJSON 파일 업로드 + 좌표 검증 |
-| 변화탐지 분석 | ✅ | 비동기 Sentinel-2 기반 dNDVI/dNBR 계산 |
-| 리스크 등급화 | ✅ | LOW / REVIEW / HIGH 자동 분류 |
-| 증빙 보고서 | ✅ | PDF, JSON, CSV 생성 및 다운로드 |
-| Streamlit 대시보드 | ✅ | 로그인, 프로젝트, 분석, 결과, 보고서 UI |
-| 데모 데이터 | ✅ | 콜롬비아 커피 5필지 + 인도네시아 팜유 2필지 |
-| Alembic 마이그레이션 | ✅ | DB 스키마 버전 관리 |
-| Docker Compose | ✅ | API + 대시보드 컨테이너 구성 |
+2025년부터 시행되는 EU Deforestation Regulation(EUDR)은 커피·팜유·코코아·대두·목재·고무·소 등 7대 원자재를 EU로 수출·수입하는 기업에게 **공급망 내 모든 필지가 2020년 12월 31일 이후 산림전용에 관여되지 않았음을 입증**할 의무를 부과합니다.
 
----
+기존 방법의 문제:
+- GIS 전문가 없이는 필지 좌표를 위성 영상과 직접 비교하기 어려움
+- 공급업체 수백 개의 필지를 수동으로 점검하면 수주~수개월 소요
+- 규제 당국이 요구하는 형식의 증빙 문서를 빠르게 만들 수 없음
 
-## 🚧 미구현 / 후순위 항목
-
-- Copernicus 실데이터 연동 (현재 Mock 모드 동작)
-- 지도 시각화 (Folium/Leaflet 필지 위치 표시)
-- 이메일 알림 (분석 완료 시)
-- 팀 다중 계정 (Organization 기능)
-- SNN 하이브리드 탐지 (전력 절감 옵션)
-- CI/CD 파이프라인
+TraceCheck의 해결:
+- CSV/GeoJSON 파일 업로드 → **수분 내 필지별 리스크 등급(LOW/REVIEW/HIGH) 자동 산출**
+- Copernicus Sentinel-2 위성 영상(무료 공개데이터) 자동 활용
+- 규제 제출용 **증빙 패키지(PDF + JSON + CSV) 즉시 생성**
 
 ---
 
-## 🌐 접속 URL (로컬 개발)
+## 대상 고객
 
-| 서비스 | URL | 비고 |
-|--------|-----|------|
-| FastAPI REST API | http://localhost:8000 | |
-| Swagger 문서 | http://localhost:8000/docs | API 전체 스펙 |
-| Streamlit 대시보드 | http://localhost:8501 | |
-
-### 데모 계정
-```
-이메일:    demo@tracecheck.io
-비밀번호:  TraceCheck2024!
-```
-
----
-
-## 📁 프로젝트 구조
-
-```
-webapp/
-├── tracecheck/               # 핵심 패키지
-│   ├── api/
-│   │   ├── main.py          # FastAPI 앱 엔트리포인트
-│   │   ├── auth.py          # JWT 인증 헬퍼
-│   │   ├── schemas.py       # Pydantic 스키마
-│   │   └── routes/
-│   │       ├── auth.py      # /api/auth/*
-│   │       ├── projects.py  # /api/projects/*
-│   │       ├── parcels.py   # /api/projects/{id}/parcels/*
-│   │       ├── analysis.py  # /api/projects/{id}/analyze, /api/jobs/*
-│   │       └── reports.py   # /api/jobs/{id}/reports, /api/reports/*
-│   ├── core/
-│   │   ├── change_detector.py   # dNDVI/dNBR 규칙기반 탐지기
-│   │   ├── risk_scorer.py       # LOW/REVIEW/HIGH 등급 산출
-│   │   ├── sentinel_fetcher.py  # Sentinel-2 다운로드 (Mock+Real)
-│   │   ├── geo_validator.py     # CSV/GeoJSON 좌표 검증
-│   │   └── report_generator.py  # PDF/JSON/CSV 증빙 생성
-│   ├── db/
-│   │   ├── models.py   # SQLAlchemy ORM 모델
-│   │   ├── crud.py     # 비동기 CRUD 함수
-│   │   └── session.py  # DB 엔진 + 세션 팩토리
-│   ├── pipeline/
-│   │   └── eudr_pipeline.py  # 전체 분석 오케스트레이터
-│   └── config.py             # Pydantic Settings
-├── frontend/
-│   └── app.py           # Streamlit 멀티페이지 대시보드
-├── migrations/           # Alembic 마이그레이션
-├── scripts/
-│   ├── seed_demo.py      # 데모 데이터 시딩
-│   └── download_sentinel2.py
-├── spikeeo/              # 원본 SpikeEO 엔진 (참조용)
-├── ecosystem.config.cjs  # PM2 서비스 설정
-├── docker-compose.yml    # Docker 배포 구성
-├── Dockerfile            # 컨테이너 빌드 파일
-├── pyproject.toml        # 의존성 + CLI
-└── alembic.ini           # Alembic 설정
-```
-
----
-
-## 🔑 핵심 API 엔드포인트
-
-| Method | Path | 설명 |
-|--------|------|------|
-| POST | `/api/auth/register` | 회원가입 |
-| POST | `/api/auth/login` | 로그인 (JWT 발급) |
-| GET  | `/api/auth/me` | 현재 사용자 정보 |
-| GET  | `/api/projects` | 프로젝트 목록 |
-| POST | `/api/projects` | 프로젝트 생성 |
-| POST | `/api/projects/{id}/parcels/upload` | 필지 CSV/GeoJSON 업로드 |
-| GET  | `/api/projects/{id}/parcels` | 필지 목록 |
-| POST | `/api/projects/{id}/analyze` | 분석 시작 (비동기 202) |
-| GET  | `/api/projects/{id}/jobs` | 분석 이력 |
-| GET  | `/api/jobs/{id}` | 작업 상태 조회 |
-| GET  | `/api/jobs/{id}/results` | 필지별 결과 |
-| GET  | `/api/jobs/{id}/results/summary` | 리스크 요약 집계 |
-| POST | `/api/jobs/{id}/reports` | 보고서 생성 (format: pdf/json/csv) |
-| GET  | `/api/reports/{id}/download` | 보고서 다운로드 |
-
----
-
-## 🗄️ 데이터 모델
-
-```
-User ──< Project ──< Parcel
-                ──< AnalysisJob ──< ParcelResult
-                                ──< Report
-```
-
-| 테이블 | 주요 필드 |
+| 고객군 | 주요 니즈 |
 |--------|----------|
-| users | id, email, hashed_password, org_name |
-| projects | id, owner_id, name, commodity, origin_country, cutoff_date |
-| parcels | id, project_id, geojson, supplier_name, parcel_ref, area_ha |
-| analysis_jobs | id, project_id, status, total_parcels, processed_parcels |
-| parcel_results | id, job_id, parcel_id, risk_level, delta_ndvi, changed_area_ha |
-| reports | id, job_id, format, file_path, file_size_bytes |
+| 커피·코코아·팜유 수입업체 | 공급업체 필지 일괄 사전점검 |
+| 중견 공급망 관리 기업 | ESG 실사 자동화, 감사 대응 |
+| ESG/구매팀 | 고위험 공급업체 조기 식별 |
+| 인증·컨설팅 회사 | 다수 고객사 일괄 증빙 처리 |
 
 ---
 
-## 🚀 로컬 실행 가이드
+## 제품 워크플로우
 
-### 1. 의존성 설치
-```bash
-pip install -e ".[api,dashboard]"
+```
+1. 로그인
+       ↓
+2. 프로젝트 생성  (원자재 종류, 원산지 국가, EUDR 기준일 설정)
+       ↓
+3. 필지 업로드   (CSV 또는 GeoJSON — 공급업체명 + GPS 좌표)
+       ↓
+4. 좌표 검증     (포맷 오류, 범위 이탈, 중복 자동 탐지)
+       ↓
+5. 리스크 분석   (Sentinel-2 위성 영상 기반 dNDVI/dNBR 변화탐지)
+       ↓
+6. 결과 검토     (필지별 LOW / REVIEW / HIGH 등급 + 근거 수치)
+       ↓
+7. 증빙 내보내기 (PDF 보고서 + JSON 데이터 패키지 + CSV 요약)
+       ↓
+8. 이력 감사     (모든 작업 로그 — 누가 언제 어떤 결과를 얻었는지)
 ```
 
-### 2. DB 마이그레이션
+---
+
+## 핵심 API (MVP)
+
+```
+POST   /api/auth/register                      회원가입
+POST   /api/auth/login                         로그인 (JWT)
+
+POST   /api/projects                           프로젝트 생성
+GET    /api/projects                           프로젝트 목록
+GET    /api/projects/{id}                      프로젝트 상세
+
+POST   /api/projects/{id}/plots/upload         필지 CSV/GeoJSON 업로드
+POST   /api/projects/{id}/plots/validate       좌표 유효성 검사 (저장 전 미리보기)
+GET    /api/projects/{id}/plots                필지 목록
+
+POST   /api/projects/{id}/assess               리스크 분석 시작 (비동기)
+GET    /api/projects/{id}/jobs                 분석 작업 이력
+GET    /api/jobs/{job_id}                      작업 상태 조회
+GET    /api/jobs/{job_id}/results              필지별 결과
+GET    /api/jobs/{job_id}/results/summary      리스크 요약 집계
+
+POST   /api/jobs/{job_id}/export               증빙 내보내기 (format: pdf/json/csv)
+GET    /api/exports/{export_id}/download       파일 다운로드
+GET    /api/projects/{id}/history              프로젝트 감사 이력
+```
+
+---
+
+## 리스크 등급 기준
+
+| 등급 | 조건 | 대응 권고 |
+|------|------|----------|
+| 🟢 **LOW** | dNDVI < 0.10 AND 변화면적 < 0.3 ha | 증빙 패키지로 통과 처리 가능 |
+| 🟡 **REVIEW** | dNDVI ≥ 0.10 OR 변화면적 ≥ 0.3 ha OR 구름 > 50% | 전문가 추가 검토 필요 |
+| 🔴 **HIGH** | dNDVI ≥ 0.15 AND 변화면적 ≥ 1.0 ha | 현장 실사 또는 공급업체 교체 검토 |
+
+**EUDR 기준일**: 2020년 12월 31일 (기본값, 프로젝트별 변경 가능)  
+**위성 데이터**: Copernicus Sentinel-2 L2A (ESA 무료 공개, 10m 해상도)
+
+---
+
+## 기술 구조
+
+```
+TraceCheck (EUDR SaaS 레이어)
+├── tracecheck/
+│   ├── api/           FastAPI REST API
+│   │   └── routes/    projects · plots · assess · export · history
+│   ├── core/          업무 로직
+│   │   ├── change_detector.py    dNDVI/dNBR 변화탐지 (NumPy 룰 기반)
+│   │   ├── risk_scorer.py        LOW/REVIEW/HIGH 등급 산출
+│   │   ├── geo_validator.py      좌표 검증
+│   │   ├── sentinel_fetcher.py   Sentinel-2 데이터 취득
+│   │   └── report_generator.py   PDF/JSON/CSV 생성
+│   ├── db/            SQLAlchemy ORM + Alembic 마이그레이션
+│   └── pipeline/      비동기 분석 파이프라인
+│
+SpikeEO (내부 엔진 레이어 — 현재 룰 기반, 향후 SNN 선택 옵션)
+└── spikeeo/
+    ├── io/            GeoTIFF 입출력, 식생지수, 클라우드 마스크
+    └── tasks/         change_detection (핵심 재사용)
+                       [classification/segmentation/detection/anomaly → 후순위]
+
+Frontend
+└── frontend/app.py    Streamlit 6-페이지 대시보드
+```
+
+---
+
+## 데이터 모델
+
+```
+users ──< projects ──< plots
+                  ──< job_runs ──< plot_assessments
+                             ──< evidence_exports
+```
+
+| 테이블 | 역할 |
+|--------|------|
+| `users` | 조직 계정 |
+| `projects` | 원자재·원산지·기준일 단위 실사 묶음 |
+| `plots` | 공급업체 필지 좌표 (GeoJSON) |
+| `job_runs` | 분석 작업 실행 단위 |
+| `plot_assessments` | 필지별 리스크 결과 |
+| `evidence_exports` | 생성된 증빙 파일 메타데이터 |
+
+---
+
+## 시작하기
+
 ```bash
+# 1. 의존성 설치
+pip install -e ".[dev]"
+
+# 2. DB 초기화
 alembic upgrade head
-```
 
-### 3. 데모 데이터 시딩
-```bash
+# 3. 데모 데이터 시딩
 python scripts/seed_demo.py
-```
 
-### 4. 서비스 시작 (PM2)
-```bash
+# 4. 서비스 시작 (PM2)
 pm2 start ecosystem.config.cjs
-pm2 logs --nostream
+
+# 5. 접속
+#   API 문서:   http://localhost:8000/docs
+#   대시보드:   http://localhost:8501
+#   데모 계정:  demo@tracecheck.io / TraceCheck2024!
 ```
-
-### 5. Docker Compose
-```bash
-docker-compose up -d
-```
-
----
-
-## 🔬 리스크 등급 기준
-
-| 등급 | 기준 |
-|------|------|
-| 🟢 LOW | dNDVI < 0.10 AND 변화면적 < 0.3ha |
-| 🟡 REVIEW | dNDVI ≥ 0.10 OR 변화면적 ≥ 0.3ha OR 구름 > 50% |
-| 🔴 HIGH | dNDVI ≥ 0.15 AND 변화면적 ≥ 1.0ha |
-
-EUDR 기준일: **2020년 12월 31일** (기본값)
 
 ---
 
 ## ⚠️ 법적 고지 (Legal Disclaimer)
 
-본 TraceCheck 시스템이 생성하는 모든 보고서 및 리스크 등급은 Copernicus Sentinel-2 위성 영상 데이터를 기반으로 한 **자동화된 사전 선별(pre-screening) 지원 도구**입니다.
+**[한국어]**  
+본 TraceCheck 서비스는 EU 산림전용방지 규정(EUDR, Regulation (EU) 2023/1115) 대응을 위한 **사전점검 및 증빙 워크플로우 지원 도구**입니다.
 
-- 본 도구의 출력물은 EU 산림전용방지 규정(EUDR Regulation (EU) 2023/1115) 또는 그 밖의 법규에 따른 **공식 컴플라이언스 판정을 구성하지 않습니다**.
-- 최종 공급망 실사 결론, 법적 판단, 인증 결정은 반드시 **자격을 갖춘 전문가의 인간 검토**를 통해 이루어져야 합니다.
-- 위성 데이터의 특성상 구름, 계절적 변동, 데이터 가용성에 따라 **위양성(false positive) 및 위음성(false negative)**이 발생할 수 있습니다.
+- 본 서비스의 모든 출력물(리스크 등급, 보고서, 수치)은 Copernicus Sentinel-2 위성 영상의 자동 분석 결과이며, **법적 구속력 있는 컴플라이언스 판정이 아닙니다.**
+- 최종 EUDR 의무 이행 책임은 **고객사(운영자)에게 있습니다.**
+- 구름, 계절 변동, 데이터 공백으로 인한 **위양성·위음성**이 발생할 수 있으며, HIGH 및 REVIEW 등급 필지는 전문가 검토 및 현장 검증을 병행해야 합니다.
+- 본 서비스는 법률 자문을 제공하지 않습니다.
+
+**[English]**  
+TraceCheck is a **pre-screening and evidence workflow support tool** for EU Deforestation Regulation (EUDR, Regulation (EU) 2023/1115) due diligence.
+
+- All outputs (risk grades, reports, metrics) are results of automated satellite image analysis and do **NOT constitute legally binding compliance determinations.**
+- **Final responsibility for EUDR compliance obligations remains with the operator (customer).**
+- False positives and negatives may occur due to cloud cover, seasonal variation, or data gaps. HIGH and REVIEW plots must be subject to expert review and field verification where appropriate.
+- This service does not provide legal advice.
 
 ---
 
-## 📅 개발 상태
+## Repo Audit 표 (Keep / Remove / Later)
 
-- **플랫폼**: FastAPI + SQLite (aiosqlite) + Streamlit
-- **분석 엔진**: Sentinel-2 dNDVI/dNBR 규칙 기반 (SpikeEO 자산 재사용)
-- **버전**: 0.1.0-MVP
-- **업데이트**: 2026-04-06
-- **GitHub**: https://github.com/NIWS-shindongju/snn
-
----
-
-## 📋 12주 로드맵 진행 현황
-
-| 주차 | 항목 | 상태 |
+| 경로 | 판정 | 이유 |
 |------|------|------|
-| W1-2 | 기반 인프라, DB, 인증 | ✅ 완료 |
-| W3-4 | 필지 업로드, 좌표 검증 | ✅ 완료 |
-| W5-6 | Sentinel-2 연동, 변화탐지 | ✅ 완료 |
-| W7-8 | 비동기 분석, 리스크 등급화 | ✅ 완료 |
-| W9-10 | 증빙 보고서, 대시보드 UI | ✅ 완료 |
-| W11 | 데모 데이터, Docker | ✅ 완료 |
-| W12 | 베타 고객 접촉, 피드백 수렴 | 🔄 진행 중 |
+| `tracecheck/` (전체) | ✅ **KEEP** | EUDR SaaS 핵심 — API, DB, 파이프라인, 보고서 |
+| `tracecheck/core/change_detector.py` | ✅ **KEEP** | 순수 NumPy 변화탐지, 의존성 없음 |
+| `tracecheck/core/sentinel_fetcher.py` | ✅ **KEEP** | Sentinel-2 취득 (mock + real) |
+| `tracecheck/core/geo_validator.py` | ✅ **KEEP** | CSV/GeoJSON 필지 검증 |
+| `tracecheck/core/risk_scorer.py` | ✅ **KEEP** | LOW/REVIEW/HIGH 등급 |
+| `tracecheck/core/report_generator.py` | ✅ **KEEP** | PDF/JSON/CSV 증빙 생성 |
+| `tracecheck/db/models.py` | ✅ **KEEP** | v2 SaaS 스키마 (plots, job_runs 등) |
+| `tracecheck/pipeline/eudr_pipeline.py` | ✅ **KEEP** | 비동기 분석 오케스트레이터 |
+| `frontend/app.py` | ✅ **KEEP** | Streamlit 대시보드 |
+| `scripts/seed_demo.py` | ✅ **KEEP** | 데모 시딩 |
+| `migrations/` | ✅ **KEEP** | Alembic 마이그레이션 이력 |
+| `spikeeo/io/` | 🔵 **KEEP (참조용)** | vegetation.py, cloud_mask.py — tracecheck/core에서 재구현 |
+| `spikeeo/tasks/change_detection.py` | 🔵 **KEEP (참조용)** | 핵심 룰 로직 참조 소스 |
+| `spikeeo/core/snn_backbone.py` | 🟡 **LATER** | torch/SNN — MVP에서 불필요, 향후 정확도 개선 시 |
+| `spikeeo/core/hybrid_router.py` | 🟡 **LATER** | SNN 라우팅 — torch 의존성 제거 후 |
+| `spikeeo/core/converter.py` | 🟡 **LATER** | ANN→SNN 변환 — torch 필요 |
+| `spikeeo/core/cnn_fallback.py` | 🟡 **LATER** | CNN 폴백 — torch 필요 |
+| `spikeeo/benchmark/cnn_vs_snn.py` | ❌ **REMOVE** | MVP에서 불필요, 연구용 벤치마크 |
+| `spikeeo/benchmark/cost_calculator.py` | ❌ **REMOVE** | MVP에서 불필요 |
+| `spikeeo/tasks/anomaly.py` | ❌ **REMOVE** | 범용 이상탐지 — EUDR 업무와 무관 |
+| `spikeeo/tasks/classification.py` | ❌ **REMOVE** | 범용 분류기 — EUDR 업무와 무관 |
+| `spikeeo/tasks/detection.py` | ❌ **REMOVE** | 객체탐지 — EUDR 업무와 무관 |
+| `spikeeo/tasks/segmentation.py` | ❌ **REMOVE** | 세그멘테이션 — EUDR 업무와 무관 |
+| `spikeeo/engine.py` | 🟡 **LATER** | 범용 엔진 진입점 — SNN 통합 시 재활성화 |
+| `spikeeo/api/` | ❌ **REMOVE** | 범용 추론 API — tracecheck/api로 대체됨 |
+| `spikeeo/db/` | ❌ **REMOVE** | 범용 DB — tracecheck/db로 대체됨 |
+| `examples/`, `results/`, `pretrained/` | ❌ **REMOVE** | 빈 또는 연구용 디렉토리 |
+
+> ✅ KEEP: MVP에 즉시 필요 | 🔵 KEEP(참조): 코드 보존, 미사용 | 🟡 LATER: SNN 통합 시 | ❌ REMOVE: 범용 엔진 잔재
+
+---
+
+## 개발 상태
+
+- **버전**: 0.2.0-MVP (v2 SaaS 스키마)
+- **브랜치**: `eudr-mvp`  
+- **GitHub**: https://github.com/NIWS-shindongju/snn  
+- **라이선스**: MIT  
+- **마지막 업데이트**: 2026-04-06
+
+### v0.2.0 주요 변경사항
+- **DB 스키마 v2**: `parcels→plots`, `analysis_jobs→job_runs`, `parcel_results→plot_assessments`, `reports→evidence_exports` + `audit_logs` 신규
+- **CRUD 전면 재작성**: 새 모델명에 맞게 crud.py 재작성
+- **감사 로그**: 모든 주요 액션(프로젝트 생성, 업로드, 분석 시작, 보고서 생성) 자동 기록
+- **API 호환성**: v1 경로(`/parcels`, `/parcel_ref`) → v2 경로(`/plots`, `/plot_ref`) + 구버전 alias 유지
+- **E2E 검증**: 로그인→프로젝트→분석 파이프라인→결과→증빙 내보내기 전 구간 통과

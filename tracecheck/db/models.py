@@ -1,18 +1,24 @@
-"""SQLAlchemy ORM models for TraceCheck EUDR SaaS."""
+"""TraceCheck — EUDR SaaS ORM models.
+
+Table hierarchy:
+  users
+  └─ projects
+     ├─ plots
+     ├─ job_runs
+     │  ├─ plot_assessments  (one per plot per job)
+     │  └─ evidence_exports  (PDF/JSON/CSV per job)
+     └─ audit_logs           (all user actions in project)
+"""
 
 from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 
 from sqlalchemy import (
-    Boolean,
-    DateTime,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
+    Boolean, DateTime, Float, ForeignKey,
+    Integer, String, Text, JSON,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -20,217 +26,230 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
-
 def _uuid() -> str:
     return str(uuid.uuid4())
 
 
 class Base(DeclarativeBase):
-    """Declarative base for all ORM models."""
     pass
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# User
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── users ────────────────────────────────────────────────────────────────────
 
 class User(Base):
-    """Registered user / organisation account."""
-
+    """Registered organisation account."""
     __tablename__ = "users"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
-    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    org_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_now, onupdate=_now
-    )
+    id:               Mapped[str]           = mapped_column(String(36), primary_key=True, default=_uuid)
+    email:            Mapped[str]           = mapped_column(String(255), unique=True, nullable=False, index=True)
+    hashed_password:  Mapped[str]           = mapped_column(String(255), nullable=False)
+    org_name:         Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    is_active:        Mapped[bool]          = mapped_column(Boolean, default=True)
+    created_at:       Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at:       Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
     projects: Mapped[list["Project"]] = relationship(
         "Project", back_populates="owner", cascade="all, delete-orphan"
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Project
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── projects ─────────────────────────────────────────────────────────────────
 
 class Project(Base):
-    """An EUDR compliance project (one supplier batch or crop origin)."""
-
+    """
+    One EUDR compliance project = one batch of supplier plots
+    for a single commodity + origin combination.
+    """
     __tablename__ = "projects"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    owner_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    id:             Mapped[str]           = mapped_column(String(36), primary_key=True, default=_uuid)
+    owner_id:       Mapped[str]           = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
 
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # EUDR-regulated commodity: coffee | cocoa | palm_oil | soy | cattle | wood | rubber
-    commodity: Mapped[str] = mapped_column(String(50), nullable=False, default="coffee")
-    # ISO 3166-1 alpha-2 country code of origin
-    origin_country: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    # EUDR forest reference cutoff date (default 2020-12-31)
-    cutoff_date: Mapped[str] = mapped_column(String(20), nullable=False, default="2020-12-31")
+    name:           Mapped[str]           = mapped_column(String(255), nullable=False)
+    description:    Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
-    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_now, onupdate=_now
-    )
+    # EUDR commodity (coffee|cocoa|palm_oil|soy|cattle|wood|rubber)
+    commodity:      Mapped[str]           = mapped_column(String(50), nullable=False, default="coffee")
+    # ISO 3166-1 alpha-2 origin country
+    origin_country: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    # Forest reference cutoff date (EUDR default: 2020-12-31)
+    cutoff_date:    Mapped[str]           = mapped_column(String(20), nullable=False, default="2020-12-31")
 
-    owner: Mapped["User"] = relationship("User", back_populates="projects")
-    parcels: Mapped[list["Parcel"]] = relationship(
-        "Parcel", back_populates="project", cascade="all, delete-orphan"
-    )
-    jobs: Mapped[list["AnalysisJob"]] = relationship(
-        "AnalysisJob", back_populates="project", cascade="all, delete-orphan"
-    )
+    # active | archived
+    status:         Mapped[str]           = mapped_column(String(20), default="active")
+    created_at:     Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at:     Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    owner:           Mapped["User"]              = relationship("User", back_populates="projects")
+    plots:           Mapped[list["Plot"]]        = relationship("Plot",          back_populates="project", cascade="all, delete-orphan")
+    job_runs:        Mapped[list["JobRun"]]      = relationship("JobRun",        back_populates="project", cascade="all, delete-orphan")
+    audit_logs:      Mapped[list["AuditLog"]]    = relationship("AuditLog",      back_populates="project", cascade="all, delete-orphan")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Parcel
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── plots ────────────────────────────────────────────────────────────────────
 
-class Parcel(Base):
-    """A single agricultural plot / GPS coordinate from a supplier."""
+class Plot(Base):
+    """
+    A single supplier agricultural plot.
+    Geometry stored as GeoJSON Feature string.
+    """
+    __tablename__ = "plots"
 
-    __tablename__ = "parcels"
+    id:            Mapped[str]           = mapped_column(String(36), primary_key=True, default=_uuid)
+    project_id:    Mapped[str]           = mapped_column(String(36), ForeignKey("projects.id"), nullable=False, index=True)
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    project_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("projects.id"), nullable=False, index=True
-    )
+    # Supplier traceability fields
+    supplier_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    plot_ref:      Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
 
-    # Supplier reference
-    supplier_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    parcel_ref: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    # Geometry
+    geometry_type: Mapped[str]           = mapped_column(String(20), nullable=False, default="point")
+    geojson:       Mapped[str]           = mapped_column(Text, nullable=False)       # GeoJSON Feature
 
-    # Geometry: 'point' | 'polygon'
-    geometry_type: Mapped[str] = mapped_column(String(20), nullable=False, default="point")
-    # GeoJSON Feature string
-    geojson: Mapped[str] = mapped_column(Text, nullable=False)
-    # Bounding box cache: minx, miny, maxx, maxy
-    bbox_minx: Mapped[float | None] = mapped_column(Float, nullable=True)
-    bbox_miny: Mapped[float | None] = mapped_column(Float, nullable=True)
-    bbox_maxx: Mapped[float | None] = mapped_column(Float, nullable=True)
-    bbox_maxy: Mapped[float | None] = mapped_column(Float, nullable=True)
-    area_ha: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Bounding box cache (derived from geojson, for quick spatial queries)
+    bbox_minx:     Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    bbox_miny:     Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    bbox_maxx:     Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    bbox_maxy:     Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    area_ha:       Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
-    # Origin country (ISO2)
-    country: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    # Reverse-geocoded country
+    country:       Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
 
-    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    # Validation status: pending | valid | invalid
+    validation_status: Mapped[str]       = mapped_column(String(20), default="valid")
+    validation_error:  Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
-    project: Mapped["Project"] = relationship("Project", back_populates="parcels")
-    results: Mapped[list["ParcelResult"]] = relationship(
-        "ParcelResult", back_populates="parcel", cascade="all, delete-orphan"
-    )
+    uploaded_at:   Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now)
+
+    project:      Mapped["Project"]              = relationship("Project", back_populates="plots")
+    assessments:  Mapped[list["PlotAssessment"]] = relationship("PlotAssessment", back_populates="plot", cascade="all, delete-orphan")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# AnalysisJob
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── job_runs ─────────────────────────────────────────────────────────────────
 
-class AnalysisJob(Base):
-    """A batch analysis run for all parcels in a project."""
+class JobRun(Base):
+    """
+    A single execution of the risk-assessment pipeline
+    covering all plots in a project at a point in time.
+    """
+    __tablename__ = "job_runs"
 
-    __tablename__ = "analysis_jobs"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    project_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("projects.id"), nullable=False, index=True
-    )
-    triggered_by: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    id:               Mapped[str]           = mapped_column(String(36), primary_key=True, default=_uuid)
+    project_id:       Mapped[str]           = mapped_column(String(36), ForeignKey("projects.id"), nullable=False, index=True)
+    triggered_by:     Mapped[str]           = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
 
     # pending | running | done | failed
-    status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    status:           Mapped[str]           = mapped_column(String(20), default="pending")
+    total_plots:      Mapped[int]           = mapped_column(Integer, default=0)
+    processed_plots:  Mapped[int]           = mapped_column(Integer, default=0)
+    error_message:    Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
-    total_parcels: Mapped[int] = mapped_column(Integer, default=0)
-    processed_parcels: Mapped[int] = mapped_column(Integer, default=0)
-    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Sentinel-2 fetch mode: mock | real
+    data_mode:        Mapped[str]           = mapped_column(String(20), default="mock")
 
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    started_at:       Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at:     Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at:       Mapped[datetime]           = mapped_column(DateTime(timezone=True), default=_now)
 
-    project: Mapped["Project"] = relationship("Project", back_populates="jobs")
-    results: Mapped[list["ParcelResult"]] = relationship(
-        "ParcelResult", back_populates="job", cascade="all, delete-orphan"
-    )
-    reports: Mapped[list["Report"]] = relationship(
-        "Report", back_populates="job", cascade="all, delete-orphan"
-    )
+    project:          Mapped["Project"]                  = relationship("Project", back_populates="job_runs")
+    plot_assessments: Mapped[list["PlotAssessment"]]     = relationship("PlotAssessment", back_populates="job_run", cascade="all, delete-orphan")
+    evidence_exports: Mapped[list["EvidenceExport"]]     = relationship("EvidenceExport", back_populates="job_run", cascade="all, delete-orphan")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ParcelResult
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── plot_assessments ─────────────────────────────────────────────────────────
 
-class ParcelResult(Base):
-    """Per-parcel analysis result from a single job."""
+class PlotAssessment(Base):
+    """
+    Risk assessment result for one plot from one job run.
+    Contains all raw spectral metrics and the derived risk level.
+    """
+    __tablename__ = "plot_assessments"
 
-    __tablename__ = "parcel_results"
+    id:         Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    job_run_id: Mapped[str] = mapped_column(String(36), ForeignKey("job_runs.id"), nullable=False, index=True)
+    plot_id:    Mapped[str] = mapped_column(String(36), ForeignKey("plots.id"),    nullable=False, index=True)
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    job_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("analysis_jobs.id"), nullable=False, index=True
-    )
-    parcel_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("parcels.id"), nullable=False, index=True
-    )
-
-    # Risk level: low | review | high
+    # Risk classification: low | review | high
     risk_level: Mapped[str] = mapped_column(String(20), nullable=False, default="review")
 
-    # Raw spectral metrics
-    ndvi_before: Mapped[float | None] = mapped_column(Float, nullable=True)
-    ndvi_after: Mapped[float | None] = mapped_column(Float, nullable=True)
-    delta_ndvi: Mapped[float | None] = mapped_column(Float, nullable=True)
-    nbr_before: Mapped[float | None] = mapped_column(Float, nullable=True)
-    nbr_after: Mapped[float | None] = mapped_column(Float, nullable=True)
-    delta_nbr: Mapped[float | None] = mapped_column(Float, nullable=True)
-    changed_area_ha: Mapped[float | None] = mapped_column(Float, nullable=True)
-    cloud_fraction: Mapped[float | None] = mapped_column(Float, nullable=True)
-    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Spectral change metrics
+    ndvi_before:      Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    ndvi_after:       Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    delta_ndvi:       Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    nbr_before:       Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    nbr_after:        Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    delta_nbr:        Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    changed_area_ha:  Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    cloud_fraction:   Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    confidence:       Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
-    # Human-readable reason for flagging
-    flag_reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # Human-readable flag reason (why REVIEW or HIGH)
+    flag_reason:      Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
 
-    # Satellite data used
-    before_scene_date: Mapped[str | None] = mapped_column(String(30), nullable=True)
-    after_scene_date: Mapped[str | None] = mapped_column(String(30), nullable=True)
-    data_source: Mapped[str] = mapped_column(
-        String(100), default="Copernicus Sentinel-2", nullable=False
-    )
+    # Satellite scenes used
+    before_scene_date: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    after_scene_date:  Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    data_source:       Mapped[str]           = mapped_column(String(100), default="Copernicus Sentinel-2")
 
-    analyzed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    # Human reviewer override (for false-positive / false-negative mitigation)
+    # none | confirmed | dismissed
+    reviewer_decision: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    reviewer_note:     Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    reviewed_by:       Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    reviewed_at:       Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    job: Mapped["AnalysisJob"] = relationship("AnalysisJob", back_populates="results")
-    parcel: Mapped["Parcel"] = relationship("Parcel", back_populates="results")
+    assessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    job_run: Mapped["JobRun"] = relationship("JobRun", back_populates="plot_assessments")
+    plot:    Mapped["Plot"]   = relationship("Plot",   back_populates="assessments")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Report
-# ─────────────────────────────────────────────────────────────────────────────
+# ─── evidence_exports ─────────────────────────────────────────────────────────
 
-class Report(Base):
-    """Generated evidence report (PDF / JSON / CSV)."""
+class EvidenceExport(Base):
+    """
+    A generated evidence package (PDF / JSON / CSV) for a completed job run.
+    Represents the audit-ready artefact submitted to regulators or stored
+    as due-diligence proof.
+    """
+    __tablename__ = "evidence_exports"
 
-    __tablename__ = "reports"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    job_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("analysis_jobs.id"), nullable=False, index=True
-    )
+    id:         Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    job_run_id: Mapped[str] = mapped_column(String(36), ForeignKey("job_runs.id"), nullable=False, index=True)
+    created_by: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
 
     # pdf | json | csv
-    format: Mapped[str] = mapped_column(String(10), nullable=False, default="json")
-    file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    file_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    format:          Mapped[str]           = mapped_column(String(10), nullable=False)
+    file_path:       Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    file_size_bytes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    # Snapshot of summary at export time (for audit trail completeness)
+    summary_snapshot: Mapped[Optional[str]] = mapped_column(JSON, nullable=True)
 
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
-    job: Mapped["AnalysisJob"] = relationship("AnalysisJob", back_populates="reports")
+    job_run: Mapped["JobRun"] = relationship("JobRun", back_populates="evidence_exports")
+
+
+# ─── audit_logs ───────────────────────────────────────────────────────────────
+
+class AuditLog(Base):
+    """
+    Immutable log of every significant user action within a project.
+    Supports regulatory audit trail requirements.
+    """
+    __tablename__ = "audit_logs"
+
+    id:         Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id"), nullable=False, index=True)
+    user_id:    Mapped[str] = mapped_column(String(36), ForeignKey("users.id"),    nullable=False)
+
+    # e.g. "plots.upload", "job.started", "job.completed", "export.created", "assessment.reviewed"
+    action:     Mapped[str]           = mapped_column(String(100), nullable=False)
+    detail:     Mapped[Optional[str]] = mapped_column(JSON, nullable=True)   # arbitrary extra context
+
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    occurred_at: Mapped[datetime]     = mapped_column(DateTime(timezone=True), default=_now, index=True)
+
+    project: Mapped["Project"] = relationship("Project", back_populates="audit_logs")
