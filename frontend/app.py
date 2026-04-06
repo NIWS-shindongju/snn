@@ -41,11 +41,21 @@ SAMPLE_CSV = """plot_ref,supplier_name,commodity,country,latitude,longitude
 COL-001,Finca La Esperanza,coffee,CO,2.1234,-76.5432
 COL-002,Cooperativa del Sur,coffee,CO,1.8621,-76.4089
 COL-003,Hacienda Buena Vista,coffee,CO,2.4521,-76.2341
+COL-004,Familia Gutierrez,coffee,CO,1.6789,-75.9876
+COL-005,Finca San Pedro,coffee,CO,2.3012,-76.1234
+COL-006,Cooperativa Cauca,coffee,CO,1.9456,-76.3210
+COL-007,Finca El Paraiso,coffee,CO,2.0871,-76.6543
 IDN-001,PT Sawit Makmur,palm_oil,ID,-2.3456,113.4567
 IDN-002,Kebun Rakyat Kalimantan,palm_oil,ID,-1.9876,114.1234
+IDN-003,CV Agro Borneo,palm_oil,ID,-2.8765,112.9876
 GHA-001,Kwame Cocoa Farm,cocoa,GH,6.5432,-1.2345
+GHA-002,Ashanti Cooperative,cocoa,GH,7.1234,-1.8765
 BRA-001,Fazenda Amazonia,soy,BR,-8.4567,-53.2345
+BRA-002,Cooperativa Sul,soy,BR,-9.1234,-52.8765
 """
+
+# Polling timeout: max 3 minutes (60 × 3-second ticks)
+_POLL_MAX_TICKS = 60
 
 
 # ── HTTP helpers ──────────────────────────────────────────────────────────────
@@ -557,11 +567,21 @@ def page_analysis() -> None:
                         st.caption(f"⚠️ 오류: {job['error_message']}")
                     st.divider()
 
-            # Auto-refresh while jobs are running
+            # Auto-refresh while jobs are running (with timeout guard)
             if running_jobs:
-                st.info("🔄 분석 실행 중... 3초마다 자동 새로고침")
-                time.sleep(3)
-                st.rerun()
+                tick = st.session_state.get("_poll_tick", 0)
+                if tick < _POLL_MAX_TICKS:
+                    st.session_state["_poll_tick"] = tick + 1
+                    st.info(f"🔄 분석 실행 중... 자동 새로고침 ({tick * 3}s / {_POLL_MAX_TICKS * 3}s 최대)")
+                    time.sleep(3)
+                    st.rerun()
+                else:
+                    st.warning(
+                        "⏱️ 폴링 시간 초과 (3분). 아래 '수동 새로고침' 버튼을 눌러주세요."
+                    )
+                    st.session_state["_poll_tick"] = 0
+            else:
+                st.session_state["_poll_tick"] = 0
 
     col_r, _ = st.columns([1, 4])
     with col_r:
@@ -662,17 +682,18 @@ def page_results() -> None:
             for r in results:
                 risk = r.get("risk_level", "review")
                 icon = RISK_COLOURS.get(risk, "⚪")
+                # Truncate long flag_reason for table display
+                reason = r.get("flag_reason") or "-"
+                reason_short = reason[:60] + "…" if len(reason) > 60 else reason
                 rows.append({
                     "위험도": f"{icon} {risk.upper()}",
-                    "필지 Ref": r.get("plot_ref") or r.get("parcel_ref") or r.get("plot_id", "")[:8],
+                    "필지 Ref": r.get("plot_ref") or r.get("parcel_ref") or (r.get("plot_id", "") or "")[:8],
                     "공급업체": r.get("supplier_name") or "-",
                     "dNDVI": f"{r.get('delta_ndvi', 0):.3f}" if r.get("delta_ndvi") is not None else "-",
                     "변화면적(ha)": f"{r.get('changed_area_ha', 0):.2f}" if r.get("changed_area_ha") is not None else "-",
                     "구름(%)": f"{r.get('cloud_fraction', 0)*100:.0f}%" if r.get("cloud_fraction") is not None else "-",
                     "신뢰도": f"{r.get('confidence', 0)*100:.0f}%" if r.get("confidence") is not None else "-",
-                    "판정 사유": r.get("flag_reason") or "-",
-                    "Before 촬영일": (r.get("before_scene_date") or "-")[:10],
-                    "After 촬영일": (r.get("after_scene_date") or "-")[:10],
+                    "판정 사유": reason_short,
                 })
 
             df = pd.DataFrame(rows)
@@ -689,6 +710,21 @@ def page_results() -> None:
                 column_config={"위험도": st.column_config.TextColumn(width="small")},
             )
 
+            # Expandable full reasons
+            with st.expander("📋 필지별 판정 사유 전문 보기"):
+                for r in results:
+                    risk = r.get("risk_level", "review")
+                    icon = RISK_COLOURS.get(risk, "⚪")
+                    ref = r.get("plot_ref") or (r.get("plot_id", "") or "")[:8]
+                    reason = r.get("flag_reason") or "사유 없음"
+                    color = {"low": "#d4edda", "review": "#fff3cd", "high": "#f8d7da"}.get(risk, "#f8f9fa")
+                    st.markdown(
+                        f"<div style='background:{color};padding:8px;border-radius:6px;margin:4px 0'>"
+                        f"<b>{icon} {ref}</b> — {r.get('supplier_name','-')}<br>"
+                        f"<small>{reason}</small></div>",
+                        unsafe_allow_html=True,
+                    )
+
             # CSV export
             csv = df.to_csv(index=False).encode("utf-8-sig")
             st.download_button(
@@ -698,7 +734,7 @@ def page_results() -> None:
                 mime="text/csv",
             )
         else:
-            st.info("결과가 없습니다.")
+            st.info("결과가 없습니다. 분석이 완료된 후 다시 확인하세요.")
     else:
         st.error(f"결과 로딩 실패 ({results_resp.status_code})")
 
@@ -762,14 +798,25 @@ def page_reports() -> None:
 
             if st.button(f"{fmt.upper()} 생성 & 다운로드", key=f"btn_{fmt}_{key_sfx}", use_container_width=True, type="primary"):
                 with st.spinner(f"{fmt.upper()} 생성 중..."):
-                    resp = api_post(
-                        f"/api/jobs/{selected_job_id}/reports",
-                        json={"format": fmt},
-                    )
+                    try:
+                        resp = api_post(
+                            f"/api/jobs/{selected_job_id}/reports",
+                            json={"format": fmt},
+                        )
+                    except Exception as e:
+                        st.error(f"서버 연결 실패: {e}")
+                        return
+
                 if resp.status_code in (200, 201):
                     rpt = resp.json()
-                    dl = api_get(f"/api/reports/{rpt['id']}/download")
+                    try:
+                        dl = api_get(f"/api/reports/{rpt['id']}/download")
+                    except Exception as e:
+                        st.error(f"다운로드 요청 실패: {e}")
+                        return
+
                     if dl.status_code == 200:
+                        file_size = rpt.get("file_size_bytes", len(dl.content))
                         st.download_button(
                             f"📥 {fmt.upper()} 다운로드",
                             data=dl.content,
@@ -777,15 +824,27 @@ def page_reports() -> None:
                             mime=mime,
                             key=f"dl_{fmt}_{key_sfx}_{int(time.time())}",
                         )
-                        st.success(f"✅ {fmt.upper()} 생성 완료 ({rpt.get('file_size_bytes', 0):,} bytes)")
+                        st.success(f"✅ {fmt.upper()} 생성 완료 ({file_size:,} bytes)")
+                        if fmt == "pdf" and file_size < 1000:
+                            st.warning(
+                                "⚠️ PDF 파일이 매우 작습니다. reportlab 생성 실패 시 "
+                                "JSON 형식으로 자동 저장됩니다. "
+                                "JSON 버튼을 눌러 증빙 데이터를 다운로드하세요."
+                            )
                     else:
-                        st.error("다운로드 실패")
+                        st.error(f"다운로드 실패 (HTTP {dl.status_code})")
+                elif resp.status_code == 422:
+                    try:
+                        detail = resp.json().get("detail", "분석이 완료되지 않았습니다.")
+                    except Exception:
+                        detail = "분석이 완료되지 않았습니다."
+                    st.warning(f"⚠️ {detail}")
                 else:
                     try:
                         detail = resp.json().get("detail", resp.text)
                     except Exception:
                         detail = resp.text
-                    st.error(f"{fmt.upper()} 생성 실패: {detail}")
+                    st.error(f"{fmt.upper()} 생성 실패 (HTTP {resp.status_code}): {detail}")
 
     _gen_download("pdf", "application/pdf", col1, "1")
     _gen_download("json", "application/json", col2, "1")

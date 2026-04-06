@@ -268,11 +268,19 @@ IDN-001,PT Sawit Makmur,palm_oil,ID,-2.3456,113.4567
 
 ## 개발 상태
 
-- **버전**: 0.3.0-MVP (E2E 완성)
+- **버전**: 0.4.0-Demo-Stable (5분 데모 완성)
 - **브랜치**: `main`
 - **GitHub**: https://github.com/NIWS-shindongju/snn
 - **라이선스**: MIT
 - **마지막 업데이트**: 2026-04-06
+
+### v0.4.0 주요 변경사항 (현재)
+- **DEMO 모드 결정론적 분석 엔진**: GeoTIFF 없이 UUID 해시 기반으로 LOW/REVIEW/HIGH 혼합 결과 보장
+  - Copernicus 자격증명 없으면 자동으로 mock 모드 진입
+  - 분석 시간: 필지 7개 기준 1초 이내
+  - 결과 분포: LOW 2개(29%) / REVIEW 4개(57%) / HIGH 1개(14%)
+- **`plot_ref` 컬럼 인식 추가**: geo_validator의 CSV 컬럼 자동탐지에 `plot_ref` 포함
+- **E2E 8단계 검증 완료**: 로그인 → 프로젝트 → CSV업로드 → 좌표검증 → 분석 → 결과(혼합) → 증빙(PDF/JSON/CSV) → 감사이력
 
 ### v0.3.0 주요 변경사항
 - **JSON 로그인 엔드포인트 추가**: `POST /api/auth/token` (Streamlit 친화적)

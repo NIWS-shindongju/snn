@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 _LAT_ALIASES = {"lat", "latitude", "y", "lat_dd", "latitude_dd"}
 _LON_ALIASES = {"lon", "lng", "longitude", "x", "lon_dd", "longitude_dd", "long"}
 _SUPPLIER_ALIASES = {"supplier", "supplier_name", "farm", "vendor", "producer"}
-_REF_ALIASES = {"ref", "parcel_ref", "parcel_id", "plot_id", "id", "code"}
+_REF_ALIASES = {"ref", "parcel_ref", "parcel_id", "plot_id", "plot_ref", "id", "code"}
 
 # Approximate country bounding boxes (ISO2 -> (minx, miny, maxx, maxy))
 # Covers EUDR high-risk origin countries for coffee / cocoa / palm oil

@@ -4,23 +4,80 @@ Runs for a single JobRun:
   1. Load all plots for the project
   2. For each plot: fetch Sentinel-2 → detect change → score risk → save PlotAssessment
   3. Update JobRun status throughout
+
+DEMO MODE (no Copernicus credentials):
+  - Bypasses GeoTIFF I/O and returns deterministic mock ChangeResult directly
+  - Bucket assignment based on plot UUID hash → guaranteed LOW/REVIEW/HIGH mix
+  - Bucket 0-3 (40%): LOW   | Bucket 4-5 (20%): REVIEW-NDVI
+  - Bucket 6-7 (20%): REVIEW-cloud | Bucket 8-9 (20%): HIGH
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import math
 from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tracecheck.config import settings
-from tracecheck.core.change_detector import EUDRChangeDetector
+from tracecheck.core.change_detector import ChangeResult, EUDRChangeDetector
 from tracecheck.core.risk_scorer import score_risk
 from tracecheck.core.sentinel_fetcher import SentinelFetcher
 from tracecheck.db import crud
 
 logger = logging.getLogger(__name__)
+
+
+def _mock_change_result(plot_id: str, cutoff_date: str) -> ChangeResult:
+    """Return a deterministic ChangeResult without touching GeoTIFF files.
+
+    Bucket mapping (based on first 8 hex digits of UUID):
+      0-3 → LOW  (dNDVI=0.03, area=0.10 ha, cloud=0.04)
+      4-5 → REVIEW-NDVI  (dNDVI=0.13, area=1.20 ha, cloud=0.07)
+      6-7 → REVIEW-cloud (dNDVI=0.04, area=0.20 ha, cloud=0.62)
+      8-9 → HIGH  (dNDVI=0.22, area=2.50 ha, cloud=0.04)
+    """
+    from datetime import datetime, timedelta
+
+    bucket = int(plot_id.replace("-", "")[:8], 16) % 10
+    co = datetime.strptime(cutoff_date, "%Y-%m-%d")
+    before_date = (co - timedelta(days=180)).strftime("%Y-%m-%d")
+    after_date = datetime.now().strftime("%Y-%m-%d")
+
+    if bucket < 4:
+        # LOW — no significant change
+        ndvi_b, ndvi_a, cloud, area = 0.62, 0.60, 0.04, 0.10
+    elif bucket < 6:
+        # REVIEW — borderline NDVI drop
+        ndvi_b, ndvi_a, cloud, area = 0.65, 0.52, 0.07, 1.20
+    elif bucket < 8:
+        # REVIEW — high cloud cover blocks reliable assessment
+        ndvi_b, ndvi_a, cloud, area = 0.58, 0.56, 0.62, 0.18
+    else:
+        # HIGH — clear vegetation loss
+        ndvi_b, ndvi_a, cloud, area = 0.71, 0.42, 0.04, 2.50
+
+    delta = round(ndvi_b - ndvi_a, 4)
+    confidence = round(max(0.0, 1.0 - cloud), 3)
+
+    return ChangeResult(
+        parcel_id=plot_id,
+        ndvi_before=round(ndvi_b, 4),
+        ndvi_after=round(ndvi_a, 4),
+        delta_ndvi=delta,
+        nbr_before=round(ndvi_b * 0.85, 4),
+        nbr_after=round(ndvi_a * 0.85, 4),
+        delta_nbr=round(delta * 0.85, 4),
+        changed_area_ha=area,
+        cloud_fraction=round(cloud, 3),
+        confidence=confidence,
+        before_scene_date=before_date,
+        after_scene_date=after_date,
+        data_source="Copernicus Sentinel-2 (DEMO mock)",
+        error=None,
+    )
 
 
 async def run_eudr_analysis(job_id: str, db: AsyncSession) -> None:
@@ -60,36 +117,49 @@ async def run_eudr_analysis(job_id: str, db: AsyncSession) -> None:
     )
 
     # ── Initialize pipeline components ───────────────────────────────────────
-    fetcher = SentinelFetcher(data_dir=Path(settings.data_dir) / "sentinel2")
-    detector = EUDRChangeDetector(
-        ndvi_threshold=settings.ndvi_threshold,
-        min_area_ha=settings.min_changed_area_ha,
-    )
+    # Check if we're in mock/demo mode (no Copernicus credentials)
+    is_mock_mode = not (settings.copernicus_client_id and settings.copernicus_client_secret)
+    if is_mock_mode:
+        logger.info(
+            "Job %s: running in DEMO mock mode — deterministic results (no Copernicus credentials)",
+            job_id,
+        )
+    else:
+        fetcher = SentinelFetcher(data_dir=Path(settings.data_dir) / "sentinel2")
+        detector = EUDRChangeDetector(
+            ndvi_threshold=settings.ndvi_threshold,
+            min_area_ha=settings.min_changed_area_ha,
+        )
 
     processed = 0
     errors = 0
 
     for plot in plots:
         try:
-            # Extract bbox from plot geometry
-            bbox = _get_bbox(plot)
+            if is_mock_mode:
+                # ── DEMO/mock mode: bypass GeoTIFF entirely ──────────────────
+                change_result = _mock_change_result(plot.id, cutoff_date)
+            else:
+                # ── Real Copernicus mode ──────────────────────────────────────
+                # Extract bbox from plot geometry
+                bbox = _get_bbox(plot)
 
-            # Fetch Sentinel-2 scenes (before and after cutoff)
-            before_tif, after_tif, before_info, after_info = fetcher.fetch_for_parcel(
-                parcel_id=plot.id,
-                bbox=bbox,
-                cutoff_date=cutoff_date,
-            )
+                # Fetch Sentinel-2 scenes (before and after cutoff)
+                before_tif, after_tif, before_info, after_info = fetcher.fetch_for_parcel(
+                    parcel_id=plot.id,
+                    bbox=bbox,
+                    cutoff_date=cutoff_date,
+                )
 
-            # Run change detection
-            change_result = detector.detect(
-                parcel_id=plot.id,
-                before_tif=before_tif,
-                after_tif=after_tif,
-                geojson_str=plot.geojson,
-                before_scene_date=before_info.acquisition_date,
-                after_scene_date=after_info.acquisition_date,
-            )
+                # Run change detection
+                change_result = detector.detect(
+                    parcel_id=plot.id,
+                    before_tif=before_tif,
+                    after_tif=after_tif,
+                    geojson_str=plot.geojson,
+                    before_scene_date=before_info.acquisition_date,
+                    after_scene_date=after_info.acquisition_date,
+                )
 
             # Score risk level
             risk = score_risk(change_result)

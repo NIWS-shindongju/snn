@@ -99,7 +99,13 @@ class SentinelFetcher:
         bbox: tuple[float, float, float, float],
         cutoff_date: str,
     ) -> tuple[Path, Path, SceneInfo, SceneInfo]:
-        """Generate synthetic GeoTIFF data for testing without real credentials."""
+        """Generate deterministic synthetic GeoTIFF data for demo without real credentials.
+
+        Deterministic risk assignment based on parcel_id hash:
+          - ~40% LOW   (NDVI drop < 0.08)
+          - ~40% REVIEW (NDVI drop 0.10–0.14 OR cloud > 50%)
+          - ~20% HIGH  (NDVI drop >= 0.15 AND area >= 1.0 ha)
+        """
         before_path = parcel_dir / "before.tif"
         after_path = parcel_dir / "after.tif"
 
@@ -108,23 +114,41 @@ class SentinelFetcher:
         before_date = (co - timedelta(days=180)).strftime("%Y-%m-%d")
         after_date = datetime.now().strftime("%Y-%m-%d")
 
-        if not before_path.exists():
-            _write_mock_geotiff(before_path, bbox, cloud_fraction=0.05, vegetation_ndvi=0.6)
-        if not after_path.exists():
-            # Slightly lower NDVI after cutoff to simulate minimal change
-            _write_mock_geotiff(after_path, bbox, cloud_fraction=0.05, vegetation_ndvi=0.58)
+        # Deterministic bucket based on parcel_id hash (reproducible across runs)
+        bucket = int(parcel_id.replace("-", "")[:8], 16) % 10
+
+        if bucket < 4:
+            # LOW: minimal change
+            ndvi_before, ndvi_after, cloud = 0.62, 0.60, 0.05
+        elif bucket < 6:
+            # REVIEW: borderline NDVI drop
+            ndvi_before, ndvi_after, cloud = 0.65, 0.54, 0.08
+        elif bucket < 8:
+            # REVIEW: high cloud cover
+            ndvi_before, ndvi_after, cloud = 0.58, 0.55, 0.60
+        else:
+            # HIGH: clear vegetation loss
+            ndvi_before, ndvi_after, cloud = 0.70, 0.42, 0.05
+
+        # Always regenerate mock GeoTIFFs (delete cache to ensure determinism)
+        for p in (before_path, after_path):
+            if p.exists():
+                p.unlink()
+
+        _write_mock_geotiff(before_path, bbox, cloud_fraction=cloud * 0.5, vegetation_ndvi=ndvi_before)
+        _write_mock_geotiff(after_path, bbox, cloud_fraction=cloud, vegetation_ndvi=ndvi_after)
 
         before_info = SceneInfo(
             scene_id=f"MOCK-{parcel_id[:8]}-BEFORE",
             acquisition_date=before_date,
-            cloud_coverage=5.0,
+            cloud_coverage=cloud * 50,
             file_path=before_path,
             is_mock=True,
         )
         after_info = SceneInfo(
             scene_id=f"MOCK-{parcel_id[:8]}-AFTER",
             acquisition_date=after_date,
-            cloud_coverage=5.0,
+            cloud_coverage=cloud * 100,
             file_path=after_path,
             is_mock=True,
         )

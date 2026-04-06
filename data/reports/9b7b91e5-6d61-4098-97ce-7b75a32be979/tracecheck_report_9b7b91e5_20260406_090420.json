@@ -1,0 +1,211 @@
+{
+  "report_meta": {
+    "tool": "TraceCheck",
+    "tool_version": "0.2.0",
+    "report_type": "EUDR_DUE_DILIGENCE_PRESCREENING",
+    "generated_at": "2026-04-06T09:04:20.674108+00:00",
+    "generated_by": "demo@tracecheck.io",
+    "organisation": "ACME Coffee Importers"
+  },
+  "project": {
+    "id": "9410bb80-b246-41de-8ac4-b7cadf5dc5ce",
+    "name": "Colombia Coffee Q1-2025",
+    "commodity": "coffee",
+    "origin_country": "CO",
+    "cutoff_date": "2020-12-31"
+  },
+  "analysis": {
+    "job_run_id": "9b7b91e5-6d61-4098-97ce-7b75a32be979",
+    "status": "done",
+    "started_at": "2026-04-06T09:03:04.535620",
+    "completed_at": "2026-04-06T09:03:04.580278",
+    "data_source": "Copernicus Sentinel-2 L2A",
+    "eudr_cutoff_date": "2020-12-31"
+  },
+  "summary": {
+    "total_plots": 7,
+    "low": 2,
+    "review": 4,
+    "high": 1,
+    "low_pct": 28.6,
+    "review_pct": 57.1,
+    "high_pct": 14.3
+  },
+  "plots": [
+    {
+      "plot_id": "3733f378-ca50-4545-86cf-1dedac5e7cce",
+      "plot_ref": "COL-001",
+      "supplier_name": "Finca La Esperanza",
+      "country": "CO",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.5432,
+          2.1234
+        ]
+      },
+      "risk_level": "review",
+      "delta_ndvi": 0.13,
+      "changed_area_ha": 1.2,
+      "cloud_fraction": 0.07,
+      "confidence": 0.93,
+      "flag_reason": "경계선 식생 변화 — dNDVI 0.130, 변화 면적 1.20 ha; 전문가 추가 검토 후 실사 보고서 제출 권장",
+      "before_scene_date": "2020-07-04",
+      "after_scene_date": "2026-04-06",
+      "data_source": "Copernicus Sentinel-2 (DEMO mock)",
+      "assessed_at": "2026-04-06T09:03:04.552631"
+    },
+    {
+      "plot_id": "5fc9c722-bc99-4bdd-ab58-7d430758e831",
+      "plot_ref": "COL-002",
+      "supplier_name": "Cooperativa del Sur",
+      "country": "CO",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.4089,
+          1.8621
+        ]
+      },
+      "risk_level": "review",
+      "delta_ndvi": 0.13,
+      "changed_area_ha": 1.2,
+      "cloud_fraction": 0.07,
+      "confidence": 0.93,
+      "flag_reason": "경계선 식생 변화 — dNDVI 0.130, 변화 면적 1.20 ha; 전문가 추가 검토 후 실사 보고서 제출 권장",
+      "before_scene_date": "2020-07-04",
+      "after_scene_date": "2026-04-06",
+      "data_source": "Copernicus Sentinel-2 (DEMO mock)",
+      "assessed_at": "2026-04-06T09:03:04.556795"
+    },
+    {
+      "plot_id": "90674cc4-33e8-4dbd-a53a-cffa6a7885e7",
+      "plot_ref": "COL-003",
+      "supplier_name": "Hacienda Buena Vista",
+      "country": "CO",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.2341,
+          2.4521
+        ]
+      },
+      "risk_level": "review",
+      "delta_ndvi": 0.13,
+      "changed_area_ha": 1.2,
+      "cloud_fraction": 0.07,
+      "confidence": 0.93,
+      "flag_reason": "경계선 식생 변화 — dNDVI 0.130, 변화 면적 1.20 ha; 전문가 추가 검토 후 실사 보고서 제출 권장",
+      "before_scene_date": "2020-07-04",
+      "after_scene_date": "2026-04-06",
+      "data_source": "Copernicus Sentinel-2 (DEMO mock)",
+      "assessed_at": "2026-04-06T09:03:04.559909"
+    },
+    {
+      "plot_id": "a1088382-5fa9-4a8a-bf97-b2c8b227063d",
+      "plot_ref": "COL-004",
+      "supplier_name": "Familia Gutierrez",
+      "country": "CO",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.9876,
+          1.6789
+        ]
+      },
+      "risk_level": "low",
+      "delta_ndvi": 0.02,
+      "changed_area_ha": 0.1,
+      "cloud_fraction": 0.04,
+      "confidence": 0.96,
+      "flag_reason": "유의미한 식생 변화 없음 — dNDVI 0.020 (임계값 0.1 미만), 변화 면적 0.10 ha → EUDR 기준일 이후 산림전용 징후 미검출",
+      "before_scene_date": "2020-07-04",
+      "after_scene_date": "2026-04-06",
+      "data_source": "Copernicus Sentinel-2 (DEMO mock)",
+      "assessed_at": "2026-04-06T09:03:04.563216"
+    },
+    {
+      "plot_id": "e8bd22f8-8b17-48d3-9591-88a3401a8ba1",
+      "plot_ref": "COL-005",
+      "supplier_name": "Finca San Pedro",
+      "country": "CO",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.1234,
+          2.3012
+        ]
+      },
+      "risk_level": "high",
+      "delta_ndvi": 0.29,
+      "changed_area_ha": 2.5,
+      "cloud_fraction": 0.04,
+      "confidence": 0.96,
+      "flag_reason": "EUDR 기준일 이후 식생 손실 감지 — dNDVI 0.290 (임계값 0.15), 변화 면적 2.50 ha → 현장 검증 강력 권고",
+      "before_scene_date": "2020-07-04",
+      "after_scene_date": "2026-04-06",
+      "data_source": "Copernicus Sentinel-2 (DEMO mock)",
+      "assessed_at": "2026-04-06T09:03:04.567973"
+    },
+    {
+      "plot_id": "0b1637c0-4b9b-4b02-9b5b-0b5408aedd34",
+      "plot_ref": "COL-006",
+      "supplier_name": "Cooperativa Cauca",
+      "country": "CO",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.321,
+          1.9456
+        ]
+      },
+      "risk_level": "low",
+      "delta_ndvi": 0.02,
+      "changed_area_ha": 0.1,
+      "cloud_fraction": 0.04,
+      "confidence": 0.96,
+      "flag_reason": "유의미한 식생 변화 없음 — dNDVI 0.020 (임계값 0.1 미만), 변화 면적 0.10 ha → EUDR 기준일 이후 산림전용 징후 미검출",
+      "before_scene_date": "2020-07-04",
+      "after_scene_date": "2026-04-06",
+      "data_source": "Copernicus Sentinel-2 (DEMO mock)",
+      "assessed_at": "2026-04-06T09:03:04.571876"
+    },
+    {
+      "plot_id": "5d89effa-9c61-4566-8dd3-b22c7309ae2b",
+      "plot_ref": "COL-007",
+      "supplier_name": "Finca El Paraiso",
+      "country": "CO",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -76.6543,
+          2.0871
+        ]
+      },
+      "risk_level": "review",
+      "delta_ndvi": 0.13,
+      "changed_area_ha": 1.2,
+      "cloud_fraction": 0.07,
+      "confidence": 0.93,
+      "flag_reason": "경계선 식생 변화 — dNDVI 0.130, 변화 면적 1.20 ha; 전문가 추가 검토 후 실사 보고서 제출 권장",
+      "before_scene_date": "2020-07-04",
+      "after_scene_date": "2026-04-06",
+      "data_source": "Copernicus Sentinel-2 (DEMO mock)",
+      "assessed_at": "2026-04-06T09:03:04.575773"
+    }
+  ],
+  "disclaimer": {
+    "en": "This report is generated by TraceCheck, an AI-assisted pre-screening tool for supply chain due diligence. The risk classifications provided herein are based on satellite-derived spectral indices (Sentinel-2, Copernicus) and do NOT constitute a legal determination of compliance with the EU Deforestation Regulation (EUDR/EU 2023/1115) or any other regulatory framework. All final compliance decisions remain the sole responsibility of the reporting organisation. Results may be affected by cloud cover, seasonal vegetation changes, and satellite data availability. Parcels classified as HIGH or REVIEW risk should be subject to independent expert review and, where appropriate, field verification.",
+    "ko": "본 보고서는 공급망 사전실사를 위한 AI 보조 사전점검 도구 TraceCheck에 의해 생성되었습니다. 본 리스크 분류는 위성 기반 분광 지수(Sentinel-2, Copernicus)에 근거하며, EU 산림전용방지규정(EUDR/EU 2023/1115) 또는 기타 규제 프레임워크에 따른 법적 준수 여부의 최종 판정을 구성하지 않습니다. 모든 최종 준수 결정에 대한 법적 책임은 보고 기관에 있습니다. HIGH 또는 REVIEW 등급 필지에 대해서는 전문가 검토 및 현장 실사를 병행하시기 바랍니다."
+  },
+  "risk_methodology": {
+    "description": "Rule-based spectral index change detection using Sentinel-2 imagery",
+    "indices_used": [
+      "NDVI (Normalised Difference Vegetation Index)",
+      "NBR (Normalised Burn Ratio)"
+    ],
+    "low": "No significant vegetation change detected after EUDR cutoff date.",
+    "review": "Borderline change values OR high cloud coverage. Human expert review recommended before final due diligence submission.",
+    "high": "Clear vegetation loss detected after EUDR cutoff date. Independent field verification strongly recommended."
+  }
+}
