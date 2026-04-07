@@ -1,1 +1,1 @@
-"""SpikeEO test suite."""
+# TraceCheck test suite

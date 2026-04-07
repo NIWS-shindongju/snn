@@ -28,8 +28,8 @@ class Settings(BaseSettings):
 
     # ── Auth / Security ───────────────────────────────────────────────────────
     secret_key: str = Field(
-        default="change-me-in-production-please",
-        description="JWT signing secret key",
+        default="dev-only-change-in-production-" + "x" * 20,
+        description="JWT signing secret key (set TRACECHECK_SECRET_KEY in production)",
     )
     algorithm: str = Field(default="HS256", description="JWT algorithm")
     access_token_expire_minutes: int = Field(
@@ -78,9 +78,24 @@ class Settings(BaseSettings):
     app_name: str = Field(default="TraceCheck", description="Application name")
     app_version: str = Field(default="0.1.0", description="Application version")
     cors_origins: list[str] = Field(
-        default=["*"],
-        description="Allowed CORS origins",
+        default=["http://localhost:3000", "http://localhost:5173", "http://localhost:8000"],
+        description="Allowed CORS origins (set TRACECHECK_CORS_ORIGINS for production)",
     )
+
+    # ── Rate Limiting ─────────────────────────────────────────────────────────
+    rate_limit_per_minute: int = Field(
+        default=60,
+        description="Global rate limit per IP per minute",
+    )
+    rate_limit_auth: int = Field(
+        default=10,
+        description="Auth endpoint rate limit per IP per minute",
+    )
+
+    # ── TRACES NT ─────────────────────────────────────────────────────────────
+    traces_nt_client_id: str = Field(default="", description="EU TRACES NT client ID")
+    traces_nt_client_secret: str = Field(default="", description="EU TRACES NT client secret")
+    traces_nt_environment: str = Field(default="test", description="TRACES environment (test|production)")
 
 
 settings = Settings()

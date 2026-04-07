@@ -21,6 +21,8 @@ from tracecheck.api.routes.reports import router as reports_router
 from tracecheck.api.routes.organizations import router as orgs_router
 from tracecheck.api.routes.webhooks import router as webhooks_router
 from tracecheck.api.routes.admin import router as admin_router
+from tracecheck.api.routes.traces import router as traces_router
+from tracecheck.api.routes.accuracy import router as accuracy_router
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -64,13 +66,33 @@ def create_app() -> FastAPI:
     )
 
     # ── CORS ──────────────────────────────────────────────────────────────────
+    origins = settings.cors_origins
+    # In production: use specific origins. For dev: allow all if explicitly set
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # ── Security Headers ──────────────────────────────────────────────────────
+    from starlette.middleware.base import BaseHTTPMiddleware
+    from starlette.requests import Request
+    from starlette.responses import Response
+
+    class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: Request, call_next):
+            response: Response = await call_next(request)
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["X-Frame-Options"] = "DENY"
+            response.headers["X-XSS-Protection"] = "1; mode=block"
+            response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+            if not settings.debug:
+                response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            return response
+
+    app.add_middleware(SecurityHeadersMiddleware)
 
     # ── Startup ───────────────────────────────────────────────────────────────
     @app.on_event("startup")
@@ -110,6 +132,8 @@ def create_app() -> FastAPI:
     app.include_router(reports_router,  prefix=V1)
     app.include_router(webhooks_router, prefix=V1)
     app.include_router(admin_router,    prefix=V1)
+    app.include_router(traces_router,   prefix=V1)
+    app.include_router(accuracy_router, prefix=V1)
 
     # ── Legacy /api/ (no version) aliases — backwards compat ─────────────────
     app.include_router(auth_router,     prefix="/api",   include_in_schema=False)
