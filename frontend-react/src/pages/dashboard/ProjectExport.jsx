@@ -59,9 +59,13 @@ function ReportCard({ format, jobId, existingReports, onGenerate }) {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!existing?.id) return;
-    window.open(reportsAPI.downloadUrl(existing.id), '_blank');
+    try {
+      await reportsAPI.download(existing.id, `TraceCheck_${format}${info.ext}`);
+    } catch (err) {
+      toast.error('다운로드에 실패했습니다.');
+    }
   };
 
   return (
@@ -81,24 +85,16 @@ function ReportCard({ format, jobId, existingReports, onGenerate }) {
       {/* Existing report info */}
       {existing && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-white/3 border border-white/5 mb-4">
-          {existing.status === 'completed' ? (
-            <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-          ) : existing.status === 'generating' ? (
-            <Loader className="w-4 h-4 text-sky-400 animate-spin flex-shrink-0" />
-          ) : (
-            <Clock className="w-4 h-4 text-amber-400 flex-shrink-0" />
-          )}
+          <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
           <div className="min-w-0">
-            <div className="text-xs text-slate-300 font-medium">
-              {existing.status === 'completed' ? '생성 완료' : existing.status === 'generating' ? '생성 중...' : '대기 중'}
-            </div>
+            <div className="text-xs text-slate-300 font-medium">생성 완료</div>
             <div className="text-xs text-slate-600 truncate">
-              {existing.created_at ? new Date(existing.created_at).toLocaleString('ko-KR') : ''}
+              {existing.generated_at ? new Date(existing.generated_at).toLocaleString('ko-KR') : ''}
             </div>
           </div>
-          {existing.file_size && (
+          {existing.file_size_bytes && (
             <span className="text-xs text-slate-500 ml-auto">
-              {(existing.file_size / 1024).toFixed(0)}KB
+              {(existing.file_size_bytes / 1024).toFixed(0)}KB
             </span>
           )}
         </div>
@@ -106,7 +102,7 @@ function ReportCard({ format, jobId, existingReports, onGenerate }) {
 
       {/* Action buttons */}
       <div className="flex gap-2">
-        {existing?.status === 'completed' ? (
+        {existing ? (
           <>
             <button
               onClick={handleDownload}

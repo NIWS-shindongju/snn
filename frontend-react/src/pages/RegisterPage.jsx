@@ -118,8 +118,8 @@ export default function RegisterPage() {
               ))}
             </div>
             <div>
-              <div className="text-white text-sm font-medium">이번 주 가입자</div>
-              <div className="text-slate-400 text-xs">47명이 이미 분석을 시작했습니다</div>
+              <div className="text-white text-sm font-medium">첫 분석까지 5분</div>
+              <div className="text-slate-400 text-xs">CSV 업로드 한 번으로 바로 시작하세요</div>
             </div>
           </div>
         </div>

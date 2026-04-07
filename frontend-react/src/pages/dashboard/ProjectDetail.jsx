@@ -317,10 +317,30 @@ export default function ProjectDetail() {
   const [activeTab, setActiveTab] = useState('개요');
 
   useEffect(() => {
-    projectsAPI.get(id)
-      .then(r => setProject(r.data))
-      .catch(() => { toast.error('프로젝트를 불러오지 못했습니다.'); navigate('/projects'); })
-      .finally(() => setLoading(false));
+    (async () => {
+      try {
+        const r = await projectsAPI.get(id);
+        const proj = r.data;
+        // Enrich with latest job summary
+        try {
+          const jobsR = await analysisAPI.projectJobs(id);
+          const doneJobs = (jobsR.data || []).filter(j => j.status === 'done' || j.status === 'completed');
+          if (doneJobs.length > 0) {
+            const sumR = await analysisAPI.jobSummary(doneJobs[0].id);
+            const s = sumR.data || {};
+            proj.high_risk_count = s.high || 0;
+            proj.review_count = s.review || 0;
+            proj.low_count = s.low || 0;
+          }
+        } catch {}
+        setProject(proj);
+      } catch {
+        toast.error('프로젝트를 불러오지 못했습니다.');
+        navigate('/projects');
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [id]);
 
   if (loading) return (

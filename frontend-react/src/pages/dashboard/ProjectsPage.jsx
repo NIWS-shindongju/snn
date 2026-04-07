@@ -5,7 +5,7 @@ import {
   Calendar, Trash2, ArrowRight, Loader, CheckCircle,
   XCircle, Clock, MoreVertical, X
 } from 'lucide-react';
-import { projectsAPI } from '../../api/client';
+import { projectsAPI, analysisAPI } from '../../api/client';
 import toast from 'react-hot-toast';
 
 function StatusBadge({ status }) {
@@ -176,12 +176,29 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
 
-  const loadProjects = () => {
+  const loadProjects = async () => {
     setLoading(true);
-    projectsAPI.list()
-      .then(r => setProjects(r.data || []))
-      .catch(() => toast.error('프로젝트 목록을 불러오지 못했습니다.'))
-      .finally(() => setLoading(false));
+    try {
+      const r = await projectsAPI.list();
+      const projs = r.data || [];
+      const enriched = await Promise.all(projs.map(async (p) => {
+        try {
+          const jobsR = await analysisAPI.projectJobs(p.id);
+          const doneJobs = (jobsR.data || []).filter(j => j.status === 'done' || j.status === 'completed');
+          if (doneJobs.length > 0) {
+            const sumR = await analysisAPI.jobSummary(doneJobs[0].id);
+            const s = sumR.data || {};
+            return { ...p, status: 'done', high_risk_count: s.high || 0 };
+          }
+        } catch {}
+        return p;
+      }));
+      setProjects(enriched);
+    } catch {
+      toast.error('프로젝트 목록을 불러오지 못했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { loadProjects(); }, []);

@@ -89,6 +89,17 @@ export const reportsAPI = {
   generate: (jobId, format) => client.post(`/jobs/${jobId}/reports`, { format }),
   list: (jobId) => client.get(`/jobs/${jobId}/reports`),
   downloadUrl: (reportId) => `${API_BASE}/reports/${reportId}/download`,
+  download: async (reportId, filename) => {
+    const resp = await client.get(`/reports/${reportId}/download`, { responseType: 'blob' });
+    const url = window.URL.createObjectURL(resp.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'report';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };
 
 // Organizations

@@ -237,7 +237,7 @@ export default function DashboardHome() {
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-slate-400">시행일</span>
-                <span className="text-amber-400 font-medium">2025.12.30</span>
+                <span className="text-amber-400 font-medium">2026.12.30</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-slate-400">대상 품목</span>
