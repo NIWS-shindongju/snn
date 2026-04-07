@@ -34,9 +34,9 @@ export default function LoginPage() {
   };
 
   const stats = [
-    { icon: <BarChart3 className="w-5 h-5" />, value: '1,200+', label: '기업 고객' },
-    { icon: <Shield className="w-5 h-5" />, value: '98%', label: 'EUDR 통과율' },
-    { icon: <CheckCircle className="w-5 h-5" />, value: '50만+', label: '분석 필지' },
+    { icon: <BarChart3 className="w-5 h-5" />, value: '5분', label: '첫 분석까지' },
+    { icon: <Shield className="w-5 h-5" />, value: '월 49만', label: 'Pro 플랜' },
+    { icon: <CheckCircle className="w-5 h-5" />, value: '한국어', label: '유일한 EUDR SaaS' },
   ];
 
   return (

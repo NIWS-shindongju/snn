@@ -50,15 +50,15 @@ export default function LandingPage() {
   const features = [
     {
       icon: <Leaf className="w-6 h-6" />,
-      title: '탄소 발자국 자동 추적',
-      desc: '공급망 전반의 탄소 배출량을 위성 데이터와 AI로 자동 측정합니다. EUDR, 탄소국경조정제도(CBAM) 요건에 완벽 대응.',
+      title: '위성 기반 사전 스크리닝',
+      desc: 'Sentinel-2 위성 데이터로 농장·필지의 식생 변화를 자동 분석합니다. HIGH 등급 필지를 사전 식별하여 현장 실사 대상을 효율적으로 선별하세요.',
       color: 'text-emerald-400',
       bg: 'bg-emerald-500/10',
     },
     {
       icon: <Shield className="w-6 h-6" />,
-      title: 'ESG 리스크 감지',
-      desc: '삼림 벌채 위험(HIGH/REVIEW/LOW) 등급 분류로 규정 위반 전 선제적 경보. EUDR 무결성 보장.',
+      title: '3단계 리스크 등급 분류',
+      desc: '필지별 HIGH/REVIEW/LOW 등급으로 분류하여 우선순위를 시각화합니다. HIGH 등급 필지는 현장 실사 병행을 권고합니다.',
       color: 'text-sky-400',
       bg: 'bg-sky-500/10',
     },
@@ -185,15 +185,15 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto text-center relative">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium mb-8 glass border border-emerald-500/30 text-emerald-400">
             <Zap className="w-3 h-3" />
-            EUDR 2025 규정 준수 · 자동화 솔루션
+            한국 기업을 위한 EUDR 대응 솔루션
           </div>
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-white mb-6 leading-tight">
-            공급망 탄소발자국<br />
-            <span className="gradient-text">추적부터 증빙까지</span>
+            EUDR 시행까지<br />
+            <span className="gradient-text">9개월, 지금 시작하세요</span>
           </h1>
           <p className="text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-            위성 데이터 + AI로 농장·필지의 삼림 벌채 위험을 자동 분석합니다.
-            EUDR 규정 준수 보고서를 몇 분 만에 생성하세요.
+            CSV 업로드 한 번으로 공급망 필지의 삼림 벌채 위험을 사전 스크리닝합니다.
+            한국어 UI · 원화 결제 · 5분 만에 첫 분석 결과를 확인하세요.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <Link to="/register" className="btn-primary text-base px-8 py-4 rounded-xl">
@@ -206,10 +206,10 @@ export default function LandingPage() {
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pt-12 border-t border-white/10">
-            <StatCard value={1200} suffix="+" label="기업 고객" />
-            <StatCard value={50} suffix="만+" label="분석 필지" />
-            <StatCard value={98} suffix="%" label="EUDR 통과율" />
-            <StatCard value={6} suffix="x" label="시간 절감" />
+            <StatCard value={5} suffix="분" label="첫 분석까지" />
+            <StatCard value={490} suffix="만원" prefix="월 " label="Pro 플랜" />
+            <StatCard value={9} suffix="개월" label="EUDR 시행까지" />
+            <StatCard value={7} suffix="종" label="대상 원자재" />
           </div>
         </div>
       </section>
