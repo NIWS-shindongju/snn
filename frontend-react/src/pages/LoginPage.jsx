@@ -14,13 +14,15 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+    if (!trimmedEmail || !trimmedPassword) {
       toast.error('이메일과 비밀번호를 입력해주세요.');
       return;
     }
     setLoading(true);
     try {
-      await login(email, password);
+      await login(trimmedEmail, trimmedPassword);
       toast.success('로그인 성공!');
       navigate('/dashboard');
     } catch (err) {

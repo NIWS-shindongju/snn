@@ -27,6 +27,7 @@ function StatCard({ icon, label, value, sub, color, bg }) {
 function StatusBadge({ status }) {
   const map = {
     completed: { label: '완료', color: 'text-emerald-400', bg: 'bg-emerald-500/10', icon: <CheckCircle className="w-3 h-3" /> },
+    done: { label: '완료', color: 'text-emerald-400', bg: 'bg-emerald-500/10', icon: <CheckCircle className="w-3 h-3" /> },
     running: { label: '실행 중', color: 'text-sky-400', bg: 'bg-sky-500/10', icon: <Loader className="w-3 h-3 animate-spin" /> },
     failed: { label: '실패', color: 'text-red-400', bg: 'bg-red-500/10', icon: <XCircle className="w-3 h-3" /> },
     pending: { label: '대기', color: 'text-amber-400', bg: 'bg-amber-500/10', icon: <Clock className="w-3 h-3" /> },
@@ -45,10 +46,30 @@ export default function DashboardHome() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    projectsAPI.list()
-      .then(r => setProjects(r.data || []))
-      .catch(() => setProjects([]))
-      .finally(() => setLoading(false));
+    (async () => {
+      try {
+        const r = await projectsAPI.list();
+        const projs = r.data || [];
+        // Enrich each project with job summary data
+        const enriched = await Promise.all(projs.map(async (p) => {
+          try {
+            const jobsR = await analysisAPI.projectJobs(p.id);
+            const doneJobs = (jobsR.data || []).filter(j => j.status === 'done' || j.status === 'completed');
+            if (doneJobs.length > 0) {
+              const sumR = await analysisAPI.jobSummary(doneJobs[0].id);
+              const s = sumR.data || {};
+              return { ...p, status: 'done', high_risk_count: s.high || 0, review_count: s.review || 0, low_count: s.low || 0 };
+            }
+          } catch {}
+          return p;
+        }));
+        setProjects(enriched);
+      } catch {
+        setProjects([]);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   const totalProjects = projects.length;

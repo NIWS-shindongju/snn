@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 function StatusBadge({ status }) {
   const map = {
     completed: { label: '완료', cls: 'badge-low' },
+    done: { label: '완료', cls: 'badge-low' },
     running: { label: '실행 중', cls: 'badge-review' },
     failed: { label: '실패', cls: 'badge-high' },
     pending: { label: '대기', cls: 'badge-review' },
@@ -92,6 +93,7 @@ function ProjectCard({ project, onDelete }) {
 
   const statusIcon = {
     completed: <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />,
+    done: <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />,
     running: <Loader className="w-3.5 h-3.5 text-sky-400 animate-spin" />,
     failed: <XCircle className="w-3.5 h-3.5 text-red-400" />,
   }[project.status] || <Clock className="w-3.5 h-3.5 text-amber-400" />;
