@@ -33,6 +33,57 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ── Enterprise CSS ────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+/* ── Global ── */
+[data-testid="stAppViewContainer"] { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+.stButton > button[kind="primary"] { background: linear-gradient(135deg, #1a73e8, #0d47a1); border: none; font-weight: 600; }
+.stButton > button[kind="primary"]:hover { background: linear-gradient(135deg, #1557b0, #0b3d91); }
+
+/* ── Risk Badges ── */
+.badge-low { background:#d4edda; color:#155724; padding:4px 12px; border-radius:20px; font-weight:700; font-size:0.82rem; display:inline-block; }
+.badge-review { background:#fff3cd; color:#856404; padding:4px 12px; border-radius:20px; font-weight:700; font-size:0.82rem; display:inline-block; }
+.badge-high { background:#f8d7da; color:#721c24; padding:4px 12px; border-radius:20px; font-weight:700; font-size:0.82rem; display:inline-block; animation: pulse-red 2s infinite; }
+@keyframes pulse-red { 0%,100% { box-shadow: 0 0 0 0 rgba(220,53,69,0.3); } 50% { box-shadow: 0 0 12px 4px rgba(220,53,69,0.2); } }
+
+/* ── Alert Banners ── */
+.high-alert-banner { background: linear-gradient(135deg, #fff0f0, #ffe0e0); border: 2px solid #dc3545; border-radius: 12px; padding: 20px 24px; margin: 16px 0; }
+.high-alert-banner h3 { color: #721c24; margin: 0 0 8px 0; }
+.high-alert-banner p { color: #856; margin: 0; }
+
+/* ── Summary Cards ── */
+.summary-card { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 12px; padding: 20px; text-align: center; }
+.summary-card .big-num { font-size: 2.8rem; font-weight: 800; line-height: 1.1; }
+.summary-card .label { font-size: 0.82rem; color: #6c757d; margin-top: 4px; }
+.summary-card.danger { border-color: #dc3545; background: #fff5f5; }
+.summary-card.danger .big-num { color: #dc3545; }
+.summary-card.warning { border-color: #ffc107; background: #fffef0; }
+.summary-card.warning .big-num { color: #856404; }
+.summary-card.success { border-color: #28a745; background: #f6fff8; }
+.summary-card.success .big-num { color: #155724; }
+
+/* ── Download Box ── */
+.dl-box { background: linear-gradient(135deg, #e8f4fd, #d0e8f7); border: 2px solid #0d6efd; border-radius: 12px; padding: 20px; text-align: center; margin: 12px 0; }
+.dl-box h4 { margin: 0 0 8px 0; color: #0d47a1; }
+
+/* ── Timeline ── */
+.tl-item { border-left: 3px solid #1a73e8; padding: 12px 0 12px 20px; margin: 0; position: relative; }
+.tl-item::before { content: ''; width: 12px; height: 12px; border-radius: 50%; background: #1a73e8; position: absolute; left: -7.5px; top: 16px; }
+.tl-item.tl-danger::before { background: #dc3545; }
+.tl-item.tl-success::before { background: #28a745; }
+.tl-item.tl-warning::before { background: #ffc107; }
+
+/* ── Login Page ── */
+.login-hero { text-align: center; padding: 40px 0 20px 0; }
+.login-hero h1 { font-size: 2.4rem; font-weight: 800; background: linear-gradient(135deg, #1a73e8, #0d47a1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.login-hero p { color: #555; font-size: 1.05rem; margin-top: 8px; }
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h1 { font-size: 1.4rem; }
+</style>
+""", unsafe_allow_html=True)
+
 # ── Colour scheme ─────────────────────────────────────────────────────────────
 RISK_COLOURS = {"low": "🟢", "review": "🟡", "high": "🔴"}
 RISK_BG = {"low": "#d4edda", "review": "#fff3cd", "high": "#f8d7da"}
@@ -97,11 +148,15 @@ def current_project() -> dict | None:
 def page_login() -> None:
     col_l, col_m, col_r = st.columns([1, 2, 1])
     with col_m:
-        st.markdown(
-            "<h1 style='text-align:center'>🌿 TraceCheck</h1>"
-            "<p style='text-align:center;color:#555'>EUDR 공급망 산림전용 리스크 사전점검 플랫폼</p>",
-            unsafe_allow_html=True,
-        )
+        st.markdown("""
+        <div class="login-hero">
+            <h1>🌿 TraceCheck</h1>
+            <p>EUDR 공급망 산림전용 리스크 사전점검 플랫폼</p>
+            <p style="font-size:0.85rem;color:#888;margin-top:4px">
+                위성 데이터 기반 자동 스크리닝 · 증빙 패키지 즉시 생성 · 감사 대응 완벽 지원
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
         st.markdown("---")
 
         tab_login, tab_register = st.tabs(["🔑 로그인", "✏️ 회원가입"])
@@ -635,12 +690,40 @@ def page_results() -> None:
     if summary_resp.status_code == 200:
         summary = summary_resp.json()
         total = summary.get("total", 0)
+        high_count = summary.get("high", 0)
 
+        # HIGH RISK ALERT BANNER
+        if high_count > 0:
+            st.markdown(f"""
+            <div class="high-alert-banner">
+                <h3>🚨 고위험 경보: {high_count}개 필지에서 산림전용 위험 감지</h3>
+                <p>전체 {total}개 필지 중 <b>{high_count}개({summary.get('high_pct', 0):.0f}%)</b>가 HIGH 등급입니다.
+                현장 실사 또는 공급업체 교체를 즉시 검토하세요.</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Summary Cards
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("📍 전체 필지", total)
-        col2.metric("🟢 LOW (저위험)", f"{summary.get('low', 0)}  ({summary.get('low_pct', 0):.0f}%)")
-        col3.metric("🟡 REVIEW (검토)", f"{summary.get('review', 0)}  ({summary.get('review_pct', 0):.0f}%)")
-        col4.metric("🔴 HIGH (고위험)", f"{summary.get('high', 0)}  ({summary.get('high_pct', 0):.0f}%)")
+        with col1:
+            st.markdown(f"""<div class="summary-card">
+                <div class="big-num">{total}</div>
+                <div class="label">📍 전체 필지</div>
+            </div>""", unsafe_allow_html=True)
+        with col2:
+            st.markdown(f"""<div class="summary-card success">
+                <div class="big-num">{summary.get('low', 0)}</div>
+                <div class="label">🟢 LOW ({summary.get('low_pct', 0):.0f}%)</div>
+            </div>""", unsafe_allow_html=True)
+        with col3:
+            st.markdown(f"""<div class="summary-card warning">
+                <div class="big-num">{summary.get('review', 0)}</div>
+                <div class="label">🟡 REVIEW ({summary.get('review_pct', 0):.0f}%)</div>
+            </div>""", unsafe_allow_html=True)
+        with col4:
+            st.markdown(f"""<div class="summary-card danger">
+                <div class="big-num">{high_count}</div>
+                <div class="label">🔴 HIGH ({summary.get('high_pct', 0):.0f}%)</div>
+            </div>""", unsafe_allow_html=True)
 
         # Donut chart
         if total > 0:

@@ -1,13 +1,20 @@
 """TraceCheck — EUDR SaaS ORM models.
 
-Table hierarchy:
-  users
-  └─ projects
-     ├─ plots
-     ├─ job_runs
-     │  ├─ plot_assessments  (one per plot per job)
-     │  └─ evidence_exports  (PDF/JSON/CSV per job)
-     └─ audit_logs           (all user actions in project)
+Table hierarchy (v2 + enterprise extensions):
+  organizations
+  └─ users (role: admin | analyst | viewer)
+     └─ projects
+        ├─ plots
+        ├─ job_runs
+        │  ├─ plot_assessments  (one per plot per job)
+        │  └─ evidence_exports  (PDF/JSON/CSV per job)
+        └─ audit_logs           (all user actions in project)
+
+Enterprise extensions:
+  subscriptions   (free | pro | enterprise tier per org)
+  webhooks        (high-risk alert notifications)
+  regulatory_frameworks  (EUDR | CBAM | CSRD — extensible)
+  partner_api_keys        (white-label / partner API)
 """
 
 from __future__ import annotations
@@ -34,20 +41,109 @@ class Base(DeclarativeBase):
     pass
 
 
+# ─── organizations ────────────────────────────────────────────────────────────
+
+class Organization(Base):
+    """A company / organisation that subscribes to TraceCheck.
+
+    One organisation can have multiple users with different roles.
+    White-label partners are also represented as organisations.
+    """
+    __tablename__ = "organizations"
+
+    id:           Mapped[str]           = mapped_column(String(36), primary_key=True, default=_uuid)
+    name:         Mapped[str]           = mapped_column(String(255), nullable=False)
+    slug:         Mapped[str]           = mapped_column(String(100), unique=True, nullable=False, index=True)
+    domain:       Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # e.g. acmecoffee.com
+
+    # White-label: custom brand name displayed in UI / reports
+    brand_name:   Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    logo_url:     Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
+    # active | suspended | trial
+    status:       Mapped[str]           = mapped_column(String(20), default="active")
+
+    created_at:   Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at:   Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    users:        Mapped[list["User"]]         = relationship("User", back_populates="organization", cascade="all, delete-orphan")
+    subscription: Mapped[Optional["Subscription"]] = relationship("Subscription", back_populates="organization", uselist=False, cascade="all, delete-orphan")
+    webhooks:     Mapped[list["Webhook"]]      = relationship("Webhook", back_populates="organization", cascade="all, delete-orphan")
+    api_keys:     Mapped[list["PartnerApiKey"]] = relationship("PartnerApiKey", back_populates="organization", cascade="all, delete-orphan")
+
+
+# ─── subscriptions ────────────────────────────────────────────────────────────
+
+class Subscription(Base):
+    """Pricing tier subscription for an organisation.
+
+    Tiers: free | pro | enterprise
+    """
+    __tablename__ = "subscriptions"
+
+    id:             Mapped[str]           = mapped_column(String(36), primary_key=True, default=_uuid)
+    org_id:         Mapped[str]           = mapped_column(String(36), ForeignKey("organizations.id"), nullable=False, unique=True, index=True)
+
+    # free | pro | enterprise
+    tier:           Mapped[str]           = mapped_column(String(20), default="free")
+
+    # Limits
+    max_projects:   Mapped[int]           = mapped_column(Integer, default=3)       # free: 3, pro: 20, enterprise: unlimited(-1)
+    max_plots_per_run: Mapped[int]        = mapped_column(Integer, default=50)      # free: 50, pro: 500, enterprise: unlimited(-1)
+    max_users:      Mapped[int]           = mapped_column(Integer, default=1)       # free: 1, pro: 5, enterprise: unlimited(-1)
+    api_access:     Mapped[bool]          = mapped_column(Boolean, default=False)   # pro+
+    webhook_access: Mapped[bool]          = mapped_column(Boolean, default=False)   # pro+
+    white_label:    Mapped[bool]          = mapped_column(Boolean, default=False)   # enterprise only
+    pdf_reports:    Mapped[bool]          = mapped_column(Boolean, default=True)
+
+    # Billing
+    stripe_customer_id:     Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    stripe_subscription_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    # active | cancelled | past_due | trialing
+    billing_status: Mapped[str]           = mapped_column(String(20), default="active")
+    trial_ends_at:  Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    renews_at:      Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    created_at:     Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at:     Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="subscription")
+
+
 # ─── users ────────────────────────────────────────────────────────────────────
 
 class User(Base):
-    """Registered organisation account."""
+    """Registered user account, belonging to an organisation.
+
+    Roles (RBAC):
+      admin   — full org access: create/delete projects, manage users
+      analyst — create/run analysis, generate reports
+      viewer  — read-only: view results and reports
+    """
     __tablename__ = "users"
 
     id:               Mapped[str]           = mapped_column(String(36), primary_key=True, default=_uuid)
+    org_id:           Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
     email:            Mapped[str]           = mapped_column(String(255), unique=True, nullable=False, index=True)
     hashed_password:  Mapped[str]           = mapped_column(String(255), nullable=False)
-    org_name:         Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    org_name:         Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # legacy / display name
+
+    # RBAC role within org
+    role:             Mapped[str]           = mapped_column(String(20), default="admin")  # admin|analyst|viewer
+
+    full_name:        Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     is_active:        Mapped[bool]          = mapped_column(Boolean, default=True)
+    is_superuser:     Mapped[bool]          = mapped_column(Boolean, default=False)  # platform admin
+
+    # Password reset
+    reset_token:      Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    reset_token_at:   Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
     created_at:       Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now)
     updated_at:       Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
+    organization: Mapped[Optional["Organization"]] = relationship("Organization", back_populates="users")
     projects: Mapped[list["Project"]] = relationship(
         "Project", back_populates="owner", cascade="all, delete-orphan"
     )
@@ -64,6 +160,7 @@ class Project(Base):
 
     id:             Mapped[str]           = mapped_column(String(36), primary_key=True, default=_uuid)
     owner_id:       Mapped[str]           = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    org_id:         Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
 
     name:           Mapped[str]           = mapped_column(String(255), nullable=False)
     description:    Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -74,6 +171,9 @@ class Project(Base):
     origin_country: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     # Forest reference cutoff date (EUDR default: 2020-12-31)
     cutoff_date:    Mapped[str]           = mapped_column(String(20), nullable=False, default="2020-12-31")
+
+    # Regulatory framework: eudr | cbam | csrd | custom
+    regulatory_framework: Mapped[str]    = mapped_column(String(50), default="eudr")
 
     # active | archived
     status:         Mapped[str]           = mapped_column(String(20), default="active")
@@ -253,3 +353,116 @@ class AuditLog(Base):
     occurred_at: Mapped[datetime]     = mapped_column(DateTime(timezone=True), default=_now, index=True)
 
     project: Mapped["Project"] = relationship("Project", back_populates="audit_logs")
+
+
+# ─── webhooks ─────────────────────────────────────────────────────────────────
+
+class Webhook(Base):
+    """
+    Webhook endpoint registered by an organisation.
+    TraceCheck will POST to this URL when a HIGH-risk plot is detected,
+    or when an analysis job completes.
+
+    Event types:
+      job.completed        — fired when a JobRun reaches 'done' status
+      plot.high_risk       — fired for each HIGH-risk PlotAssessment
+      export.created       — fired when an evidence export is generated
+    """
+    __tablename__ = "webhooks"
+
+    id:           Mapped[str]           = mapped_column(String(36), primary_key=True, default=_uuid)
+    org_id:       Mapped[str]           = mapped_column(String(36), ForeignKey("organizations.id"), nullable=False, index=True)
+    created_by:   Mapped[str]           = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+
+    name:         Mapped[str]           = mapped_column(String(100), nullable=False)
+    url:          Mapped[str]           = mapped_column(String(500), nullable=False)
+    secret:       Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # HMAC-SHA256 signing secret
+
+    # JSON array of event types to subscribe to
+    events:       Mapped[Optional[str]] = mapped_column(JSON, nullable=True)
+
+    # active | disabled
+    status:       Mapped[str]           = mapped_column(String(20), default="active")
+
+    # Last delivery info
+    last_fired_at:      Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_response_code: Mapped[Optional[int]]      = mapped_column(Integer, nullable=True)
+    failure_count:      Mapped[int]                = mapped_column(Integer, default=0)
+
+    created_at:   Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at:   Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="webhooks")
+
+
+# ─── regulatory_frameworks ────────────────────────────────────────────────────
+
+class RegulatoryFramework(Base):
+    """
+    Extensible registry of regulatory frameworks supported by TraceCheck.
+
+    Built-in entries:
+      eudr  — EU Deforestation Regulation (EU 2023/1115), cutoff 2020-12-31
+      cbam  — Carbon Border Adjustment Mechanism (deforestation component)
+      csrd  — Corporate Sustainability Reporting Directive (supply chain)
+
+    Partners can add custom frameworks.
+    """
+    __tablename__ = "regulatory_frameworks"
+
+    id:               Mapped[str]           = mapped_column(String(36), primary_key=True, default=_uuid)
+    code:             Mapped[str]           = mapped_column(String(50), unique=True, nullable=False, index=True)
+    name:             Mapped[str]           = mapped_column(String(255), nullable=False)
+    description:      Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Default cutoff date for deforestation baseline
+    default_cutoff_date: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+
+    # JSON array of applicable commodities
+    applicable_commodities: Mapped[Optional[str]] = mapped_column(JSON, nullable=True)
+
+    # JSON array of applicable countries / regions
+    applicable_regions: Mapped[Optional[str]] = mapped_column(JSON, nullable=True)
+
+    # Reporting requirements description
+    reporting_requirements: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # active | draft | deprecated
+    status:           Mapped[str]           = mapped_column(String(20), default="active")
+
+    created_at:       Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now)
+
+
+# ─── partner_api_keys ─────────────────────────────────────────────────────────
+
+class PartnerApiKey(Base):
+    """
+    API key for white-label / partner programmatic access.
+    Partners use these keys to call TraceCheck API on behalf of their customers.
+    """
+    __tablename__ = "partner_api_keys"
+
+    id:           Mapped[str]           = mapped_column(String(36), primary_key=True, default=_uuid)
+    org_id:       Mapped[str]           = mapped_column(String(36), ForeignKey("organizations.id"), nullable=False, index=True)
+    created_by:   Mapped[str]           = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+
+    name:         Mapped[str]           = mapped_column(String(100), nullable=False)
+    key_prefix:   Mapped[str]           = mapped_column(String(20), nullable=False)   # e.g. "tc_live_"
+    key_hash:     Mapped[str]           = mapped_column(String(255), nullable=False)  # bcrypt hash
+
+    # Rate limiting
+    rate_limit_per_minute: Mapped[int]  = mapped_column(Integer, default=60)
+    rate_limit_per_day:    Mapped[int]  = mapped_column(Integer, default=10000)
+
+    # Permissions JSON array: ["projects:read", "analysis:run", "reports:generate"]
+    permissions:  Mapped[Optional[str]] = mapped_column(JSON, nullable=True)
+
+    # active | revoked
+    status:       Mapped[str]           = mapped_column(String(20), default="active")
+
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at:   Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    created_at:   Mapped[datetime]      = mapped_column(DateTime(timezone=True), default=_now)
+
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="api_keys")

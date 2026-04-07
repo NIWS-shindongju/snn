@@ -1,360 +1,389 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TraceCheck — EUDR 공급망 사전점검</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
-  <style>
-    .risk-low    { background:#f0fff4; color:#276749; border-color:#68d391; }
-    .risk-review { background:#fffbeb; color:#744210; border-color:#f6c26b; }
-    .risk-high   { background:#fff5f5; color:#742a2a; border-color:#fc8181; }
-    .risk-badge-low    { @apply bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-bold; }
-    .risk-badge-review { @apply bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs font-bold; }
-    .risk-badge-high   { @apply bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-bold; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TraceCheck — EUDR 규제 대응 SaaS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { font-family: 'Inter', sans-serif; }
+.gradient-hero { background: linear-gradient(135deg, #0d1b2a 0%, #1b3a4b 40%, #274c57 100%); }
+.gradient-text { background: linear-gradient(135deg, #4ade80, #22d3ee); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.card-hover { transition: all 0.3s; }
+.card-hover:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,0.12); }
+.pricing-popular { border: 2px solid #22d3ee; position: relative; }
+.pricing-popular::before { content: '가장 인기'; position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #4ade80, #22d3ee); color: #0d1b2a; padding: 4px 16px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+.blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.15; }
+</style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-50 text-gray-900">
 
-<!-- ── NAVBAR ────────────────────────────────────────────────────────────── -->
-<nav class="bg-blue-900 text-white px-6 py-3 flex items-center justify-between shadow-lg">
-  <div class="flex items-center gap-3">
-    <i class="fas fa-satellite text-green-400 text-xl"></i>
-    <span class="font-bold text-lg tracking-tight">TraceCheck</span>
-    <span class="text-blue-300 text-xs ml-2">EUDR 공급망 사전점검</span>
-  </div>
-  <div id="nav-user" class="hidden flex items-center gap-4 text-sm">
-    <span class="text-blue-200"><i class="fas fa-building mr-1"></i><span id="nav-org">-</span></span>
-    <button onclick="logout()" class="bg-blue-700 hover:bg-blue-600 px-3 py-1.5 rounded text-xs transition">
-      <i class="fas fa-sign-out-alt mr-1"></i>로그아웃
-    </button>
-  </div>
-</nav>
-
-<!-- ── AUTH SCREEN ────────────────────────────────────────────────────────── -->
-<div id="auth-screen" class="flex items-center justify-center min-h-[calc(100vh-56px)]">
-  <div class="bg-white rounded-xl shadow-xl p-8 w-full max-w-md">
-    <div class="text-center mb-6">
-      <i class="fas fa-satellite text-blue-700 text-4xl mb-3"></i>
-      <h1 class="text-2xl font-bold text-gray-800">TraceCheck</h1>
-      <p class="text-gray-500 text-sm mt-1">EUDR 공급망 위성 사전점검 SaaS</p>
-    </div>
-
-    <!-- Login Form -->
-    <div id="login-form">
-      <h2 class="text-lg font-semibold mb-4 text-gray-700">로그인</h2>
-      <div class="space-y-3">
-        <input id="login-email" type="email" placeholder="이메일" 
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        <input id="login-password" type="password" placeholder="비밀번호" 
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          onkeydown="if(event.key==='Enter') doLogin()">
-        <button onclick="doLogin()" 
-          class="w-full bg-blue-700 hover:bg-blue-800 text-white rounded-lg py-2.5 font-medium text-sm transition">
-          <i class="fas fa-sign-in-alt mr-2"></i>로그인
-        </button>
+<!-- ═══════════════════════════════════════ HERO ═══════════════════════════════════════ -->
+<section class="gradient-hero relative overflow-hidden min-h-screen flex items-center">
+  <div class="blob w-96 h-96 bg-green-400 top-20 -left-20"></div>
+  <div class="blob w-80 h-80 bg-cyan-400 bottom-10 right-10"></div>
+  <div class="max-w-7xl mx-auto px-6 py-24 relative z-10">
+    <div class="grid lg:grid-cols-2 gap-16 items-center">
+      <div>
+        <div class="inline-block bg-green-500/20 text-green-300 text-sm font-semibold px-4 py-1.5 rounded-full mb-6">
+          🛰️ Sentinel-2 위성 데이터 기반
+        </div>
+        <h1 class="text-5xl lg:text-6xl font-black text-white leading-tight mb-6">
+          EUDR 규제,<br>
+          <span class="gradient-text">위성 데이터로<br>완벽 대응</span>
+        </h1>
+        <p class="text-gray-300 text-lg leading-relaxed mb-8 max-w-lg">
+          CSV 업로드 한 번으로 공급망 전체 필지의 산림전용 리스크를 자동 스크리닝하고,
+          규제 당국 제출용 증빙 패키지를 즉시 생성합니다.
+        </p>
+        <div class="flex flex-wrap gap-4">
+          <a href="/" class="bg-green-500 hover:bg-green-600 text-white font-bold px-8 py-4 rounded-xl text-lg transition-all shadow-lg shadow-green-500/25">
+            무료로 시작하기 →
+          </a>
+          <a href="/docs" class="border border-gray-500 text-gray-300 hover:text-white hover:border-white font-semibold px-8 py-4 rounded-xl text-lg transition-all">
+            API 문서 보기
+          </a>
+        </div>
+        <div class="flex items-center gap-8 mt-10 text-gray-400 text-sm">
+          <span>✅ 설치 불필요</span>
+          <span>✅ 5분 내 첫 분석</span>
+          <span>✅ EUDR 7대 원자재</span>
+        </div>
       </div>
-      <p class="text-center text-sm text-gray-500 mt-4">
-        계정이 없으신가요? 
-        <button onclick="showRegister()" class="text-blue-600 hover:underline">회원가입</button>
-      </p>
-      <div class="mt-4 p-3 bg-blue-50 rounded-lg text-xs text-blue-700">
-        <i class="fas fa-info-circle mr-1"></i>
-        데모 계정: demo@tracecheck.io / demo1234
-      </div>
-    </div>
-
-    <!-- Register Form -->
-    <div id="register-form" class="hidden">
-      <h2 class="text-lg font-semibold mb-4 text-gray-700">회원가입</h2>
-      <div class="space-y-3">
-        <input id="reg-org" type="text" placeholder="기업명 (선택)" 
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        <input id="reg-email" type="email" placeholder="이메일" 
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        <input id="reg-password" type="password" placeholder="비밀번호 (8자 이상)" 
-          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        <button onclick="doRegister()" 
-          class="w-full bg-green-600 hover:bg-green-700 text-white rounded-lg py-2.5 font-medium text-sm transition">
-          <i class="fas fa-user-plus mr-2"></i>가입하기
-        </button>
-      </div>
-      <p class="text-center text-sm text-gray-500 mt-4">
-        이미 계정이 있으신가요? 
-        <button onclick="showLogin()" class="text-blue-600 hover:underline">로그인</button>
-      </p>
-    </div>
-
-    <div id="auth-error" class="hidden mt-3 p-3 bg-red-50 rounded-lg text-xs text-red-700"></div>
-  </div>
-</div>
-
-<!-- ── MAIN APP ────────────────────────────────────────────────────────────── -->
-<div id="main-app" class="hidden">
-
-  <!-- Tabs -->
-  <div class="bg-white border-b shadow-sm">
-    <div class="max-w-7xl mx-auto px-6">
-      <div class="flex gap-6 text-sm font-medium">
-        <button onclick="showTab('projects')" id="tab-projects"
-          class="py-3 px-1 border-b-2 border-blue-600 text-blue-600 transition">
-          <i class="fas fa-folder-open mr-1.5"></i>프로젝트
-        </button>
-        <button onclick="showTab('upload')" id="tab-upload"
-          class="py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition">
-          <i class="fas fa-upload mr-1.5"></i>필지 업로드
-        </button>
-        <button onclick="showTab('results')" id="tab-results"
-          class="py-3 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition">
-          <i class="fas fa-chart-pie mr-1.5"></i>분석 결과
-        </button>
+      <div class="hidden lg:block">
+        <div class="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-8 shadow-2xl">
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-3 h-3 rounded-full bg-red-400"></div>
+            <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+            <div class="w-3 h-3 rounded-full bg-green-400"></div>
+            <span class="text-gray-500 text-xs ml-2">TraceCheck Dashboard</span>
+          </div>
+          <div class="space-y-3">
+            <div class="flex justify-between items-center bg-white/5 rounded-lg p-3">
+              <span class="text-gray-300 text-sm">Colombia Coffee Q1-2025</span>
+              <span class="bg-green-500/20 text-green-300 text-xs px-3 py-1 rounded-full font-bold">15 필지</span>
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+              <div class="bg-green-500/10 rounded-lg p-3 text-center">
+                <div class="text-green-400 text-2xl font-black">9</div>
+                <div class="text-gray-500 text-xs">LOW</div>
+              </div>
+              <div class="bg-yellow-500/10 rounded-lg p-3 text-center">
+                <div class="text-yellow-400 text-2xl font-black">3</div>
+                <div class="text-gray-500 text-xs">REVIEW</div>
+              </div>
+              <div class="bg-red-500/10 rounded-lg p-3 text-center">
+                <div class="text-red-400 text-2xl font-black">3</div>
+                <div class="text-gray-500 text-xs">HIGH</div>
+              </div>
+            </div>
+            <div class="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+              <div class="text-red-300 text-xs font-bold">🚨 고위험 경보</div>
+              <div class="text-gray-400 text-xs mt-1">COL-003: dNDVI −0.22, 변화면적 2.5ha</div>
+            </div>
+            <div class="bg-white/5 rounded-lg p-3">
+              <div class="text-gray-400 text-xs">📄 증빙 패키지 생성 완료</div>
+              <div class="flex gap-2 mt-2">
+                <span class="bg-blue-500/20 text-blue-300 text-xs px-2 py-0.5 rounded">PDF</span>
+                <span class="bg-blue-500/20 text-blue-300 text-xs px-2 py-0.5 rounded">JSON</span>
+                <span class="bg-blue-500/20 text-blue-300 text-xs px-2 py-0.5 rounded">CSV</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+</section>
 
-  <div class="max-w-7xl mx-auto px-6 py-6">
-
-    <!-- ── PROJECTS TAB ──────────────────────────────────────────────────── -->
-    <div id="pane-projects">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-bold text-gray-800">
-          <i class="fas fa-folder-open text-blue-600 mr-2"></i>프로젝트 목록
-        </h2>
-        <button onclick="showCreateProject()" 
-          class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
-          <i class="fas fa-plus mr-1.5"></i>새 프로젝트
-        </button>
+<!-- ═══════════════════════════════════════ PROBLEM ═══════════════════════════════════════ -->
+<section class="py-20 bg-white">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl lg:text-4xl font-bold mb-4">EUDR 실사, 왜 어려운가?</h2>
+      <p class="text-gray-500 max-w-2xl mx-auto">2025년 시행된 EU 산림전용방지 규정(EUDR)은 7대 원자재 수출입 기업에게 공급망 전체 필지의 비산림전용 입증을 의무화합니다.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-8">
+      <div class="bg-red-50 border border-red-100 rounded-2xl p-8">
+        <div class="text-3xl mb-4">😫</div>
+        <h3 class="font-bold text-lg mb-2">GIS 전문가 의존</h3>
+        <p class="text-gray-600 text-sm">위성 영상과 필지 좌표를 직접 비교하려면 GIS 전문 인력이 필요합니다. 비용과 시간이 많이 듭니다.</p>
       </div>
+      <div class="bg-red-50 border border-red-100 rounded-2xl p-8">
+        <div class="text-3xl mb-4">⏰</div>
+        <h3 class="font-bold text-lg mb-2">수백 개 필지 수동 점검</h3>
+        <p class="text-gray-600 text-sm">공급업체 수백 개의 필지를 하나하나 확인하면 수주~수개월이 소요됩니다.</p>
+      </div>
+      <div class="bg-red-50 border border-red-100 rounded-2xl p-8">
+        <div class="text-3xl mb-4">📋</div>
+        <h3 class="font-bold text-lg mb-2">증빙 문서 작성 난제</h3>
+        <p class="text-gray-600 text-sm">규제 당국이 요구하는 형식의 증빙 패키지를 빠르게 만들 수 없습니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-      <!-- Create Project Modal -->
-      <div id="create-project-modal" class="hidden mb-6 bg-white rounded-xl shadow p-6 border border-blue-200">
-        <h3 class="font-semibold mb-4 text-gray-700">새 EUDR 대응 프로젝트 생성</h3>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="col-span-2">
-            <label class="text-xs text-gray-500 mb-1 block">프로젝트명 *</label>
-            <input id="proj-name" type="text" placeholder="예: 브라질 커피 공급망 2024"
-              class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
+<!-- ═══════════════════════════════════════ FEATURES ═══════════════════════════════════════ -->
+<section class="py-20 bg-gray-50">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl lg:text-4xl font-bold mb-4">TraceCheck이 해결합니다</h2>
+      <p class="text-gray-500">CSV 업로드 한 번으로, 수분 내 전체 공급망 리스크 파악</p>
+    </div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="bg-white rounded-2xl p-8 shadow-sm card-hover">
+        <div class="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center text-2xl mb-5">🛰️</div>
+        <h3 class="font-bold text-lg mb-3">자동 위성 스크리닝</h3>
+        <p class="text-gray-500 text-sm">Sentinel-2 위성 데이터로 dNDVI/dNBR 변화를 자동 탐지합니다. 필지당 1~3초.</p>
+      </div>
+      <div class="bg-white rounded-2xl p-8 shadow-sm card-hover">
+        <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center text-2xl mb-5">📄</div>
+        <h3 class="font-bold text-lg mb-3">증빙 즉시 생성</h3>
+        <p class="text-gray-500 text-sm">PDF 보고서, JSON 데이터 패키지, CSV 요약을 클릭 한 번으로 생성합니다.</p>
+      </div>
+      <div class="bg-white rounded-2xl p-8 shadow-sm card-hover">
+        <div class="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center text-2xl mb-5">🔍</div>
+        <h3 class="font-bold text-lg mb-3">감사 대응 완벽</h3>
+        <p class="text-gray-500 text-sm">모든 작업이 감사 로그에 자동 기록됩니다. 누가, 언제, 무엇을 했는지 추적 가능.</p>
+      </div>
+      <div class="bg-white rounded-2xl p-8 shadow-sm card-hover">
+        <div class="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center text-2xl mb-5">🔗</div>
+        <h3 class="font-bold text-lg mb-3">API 연동</h3>
+        <p class="text-gray-500 text-sm">RESTful API로 기존 ERP/SCM 시스템과 직접 연동하세요. 웹훅 알림도 지원.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ HOW IT WORKS ═══════════════════════════════════════ -->
+<section class="py-20 bg-white">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl lg:text-4xl font-bold mb-4">4단계로 완료</h2>
+      <p class="text-gray-500">복잡한 EUDR 실사를 단순화했습니다</p>
+    </div>
+    <div class="grid md:grid-cols-4 gap-8">
+      <div class="text-center">
+        <div class="w-16 h-16 bg-green-500 text-white rounded-2xl flex items-center justify-center text-2xl font-black mx-auto mb-4">1</div>
+        <h3 class="font-bold mb-2">CSV 업로드</h3>
+        <p class="text-gray-500 text-sm">공급업체 필지 목록을 CSV로 업로드합니다. GPS 좌표만 있으면 됩니다.</p>
+      </div>
+      <div class="text-center">
+        <div class="w-16 h-16 bg-cyan-500 text-white rounded-2xl flex items-center justify-center text-2xl font-black mx-auto mb-4">2</div>
+        <h3 class="font-bold mb-2">자동 분석</h3>
+        <p class="text-gray-500 text-sm">Sentinel-2 위성 데이터로 산림전용 리스크를 자동 스크리닝합니다.</p>
+      </div>
+      <div class="text-center">
+        <div class="w-16 h-16 bg-blue-500 text-white rounded-2xl flex items-center justify-center text-2xl font-black mx-auto mb-4">3</div>
+        <h3 class="font-bold mb-2">결과 검토</h3>
+        <p class="text-gray-500 text-sm">필지별 LOW/REVIEW/HIGH 등급과 근거 수치를 확인합니다.</p>
+      </div>
+      <div class="text-center">
+        <div class="w-16 h-16 bg-purple-500 text-white rounded-2xl flex items-center justify-center text-2xl font-black mx-auto mb-4">4</div>
+        <h3 class="font-bold mb-2">증빙 제출</h3>
+        <p class="text-gray-500 text-sm">PDF/JSON/CSV 증빙 패키지를 생성하여 규제 당국에 제출합니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ PRICING ═══════════════════════════════════════ -->
+<section class="py-20 bg-gray-50" id="pricing">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl lg:text-4xl font-bold mb-4">요금제</h2>
+      <p class="text-gray-500">규모에 맞는 플랜을 선택하세요</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      <!-- Free -->
+      <div class="bg-white rounded-2xl p-8 shadow-sm card-hover border border-gray-200">
+        <h3 class="font-bold text-xl mb-2">Free</h3>
+        <p class="text-gray-500 text-sm mb-6">소규모 수입업체·파일럿 테스트</p>
+        <div class="mb-6">
+          <span class="text-4xl font-black">₩0</span>
+          <span class="text-gray-400">/월</span>
+        </div>
+        <ul class="space-y-3 text-sm text-gray-600 mb-8">
+          <li>✅ 프로젝트 3개</li>
+          <li>✅ 분석당 최대 50 필지</li>
+          <li>✅ CSV 결과 내보내기</li>
+          <li>✅ 감사 이력</li>
+          <li>❌ PDF 증빙 보고서</li>
+          <li>❌ API 접근</li>
+          <li>❌ 웹훅 알림</li>
+        </ul>
+        <a href="/" class="block text-center border-2 border-gray-300 text-gray-700 font-semibold py-3 rounded-xl hover:bg-gray-50 transition">시작하기</a>
+      </div>
+      <!-- Pro -->
+      <div class="bg-white rounded-2xl p-8 shadow-lg pricing-popular card-hover">
+        <h3 class="font-bold text-xl mb-2">Pro</h3>
+        <p class="text-gray-500 text-sm mb-6">중견 수입·컨설팅 기업</p>
+        <div class="mb-6">
+          <span class="text-4xl font-black">₩490,000</span>
+          <span class="text-gray-400">/월</span>
+        </div>
+        <ul class="space-y-3 text-sm text-gray-600 mb-8">
+          <li>✅ 프로젝트 20개</li>
+          <li>✅ 분석당 최대 500 필지</li>
+          <li>✅ PDF/JSON/CSV 증빙</li>
+          <li>✅ 사용자 5명</li>
+          <li>✅ RESTful API 접근</li>
+          <li>✅ 웹훅 알림</li>
+          <li>❌ 화이트라벨</li>
+        </ul>
+        <a href="/" class="block text-center bg-gradient-to-r from-green-500 to-cyan-500 text-white font-bold py-3 rounded-xl hover:opacity-90 transition shadow-lg">Pro 시작하기</a>
+      </div>
+      <!-- Enterprise -->
+      <div class="bg-white rounded-2xl p-8 shadow-sm card-hover border border-gray-200">
+        <h3 class="font-bold text-xl mb-2">Enterprise</h3>
+        <p class="text-gray-500 text-sm mb-6">대기업·인증기관·파트너</p>
+        <div class="mb-6">
+          <span class="text-4xl font-black">맞춤</span>
+        </div>
+        <ul class="space-y-3 text-sm text-gray-600 mb-8">
+          <li>✅ 프로젝트 무제한</li>
+          <li>✅ 필지 무제한</li>
+          <li>✅ 사용자 무제한</li>
+          <li>✅ 화이트라벨 지원</li>
+          <li>✅ 파트너 API 키</li>
+          <li>✅ 다중 규제 프레임워크</li>
+          <li>✅ 전담 기술 지원</li>
+        </ul>
+        <a href="mailto:contact@tracecheck.io" class="block text-center border-2 border-gray-300 text-gray-700 font-semibold py-3 rounded-xl hover:bg-gray-50 transition">문의하기</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ TESTIMONIALS ═══════════════════════════════════════ -->
+<section class="py-20 bg-white">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl lg:text-4xl font-bold mb-4">고객 후기</h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-8">
+      <div class="bg-gray-50 rounded-2xl p-8">
+        <div class="text-yellow-400 text-lg mb-4">★★★★★</div>
+        <p class="text-gray-600 mb-6">"기존에 3주 걸리던 실사 작업을 TraceCheck으로 반나절 만에 끝냈습니다. 증빙 보고서도 바로 나오니 감사 대응이 정말 편해졌어요."</p>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-green-200 rounded-full flex items-center justify-center font-bold text-green-700">K</div>
           <div>
-            <label class="text-xs text-gray-500 mb-1 block">품목 *</label>
-            <select id="proj-commodity" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="coffee">☕ 커피 (Coffee)</option>
-              <option value="cocoa">🍫 코코아 (Cocoa)</option>
-              <option value="palm_oil">🌴 팜유 (Palm Oil)</option>
-              <option value="soy">🌱 대두 (Soy)</option>
-              <option value="cattle">🐄 소 (Cattle)</option>
-              <option value="wood">🪵 목재 (Wood)</option>
-              <option value="rubber">🔵 고무 (Rubber)</option>
-              <option value="other">기타</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs text-gray-500 mb-1 block">원산지 국가 코드 (ISO2)</label>
-            <input id="proj-country" type="text" placeholder="예: BR (브라질)" maxlength="5"
-              class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-          <div class="col-span-2">
-            <label class="text-xs text-gray-500 mb-1 block">설명 (선택)</label>
-            <input id="proj-desc" type="text" placeholder="프로젝트 설명"
-              class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div class="font-semibold text-sm">김 수현</div>
+            <div class="text-gray-400 text-xs">A사 ESG 팀장</div>
           </div>
         </div>
-        <div class="flex gap-3 mt-4">
-          <button onclick="createProject()" 
-            class="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg text-sm font-medium transition">
-            <i class="fas fa-check mr-1.5"></i>생성
-          </button>
-          <button onclick="hideCreateProject()" 
-            class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm transition">
-            취소
-          </button>
+      </div>
+      <div class="bg-gray-50 rounded-2xl p-8">
+        <div class="text-yellow-400 text-lg mb-4">★★★★★</div>
+        <p class="text-gray-600 mb-6">"팜유 공급망 300개 필지를 한 번에 분석해서 고위험 공급업체를 즉시 파악했습니다. API 연동으로 SCM 시스템과 자동화까지 했어요."</p>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-blue-200 rounded-full flex items-center justify-center font-bold text-blue-700">P</div>
+          <div>
+            <div class="font-semibold text-sm">Park J.</div>
+            <div class="text-gray-400 text-xs">B사 구매 본부장</div>
+          </div>
         </div>
       </div>
-
-      <!-- Project List -->
-      <div id="projects-list" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <div class="text-center py-12 text-gray-400 col-span-full">
-          <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
-          <p>불러오는 중...</p>
+      <div class="bg-gray-50 rounded-2xl p-8">
+        <div class="text-yellow-400 text-lg mb-4">★★★★★</div>
+        <p class="text-gray-600 mb-6">"컨설팅 고객사 20곳의 EUDR 실사를 TraceCheck 하나로 관리하고 있습니다. 멀티테넌시 구조가 확실히 편해요."</p>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-purple-200 rounded-full flex items-center justify-center font-bold text-purple-700">L</div>
+          <div>
+            <div class="font-semibold text-sm">이 민호</div>
+            <div class="text-gray-400 text-xs">C사 ESG 컨설턴트</div>
+          </div>
         </div>
       </div>
     </div>
+  </div>
+</section>
 
-    <!-- ── UPLOAD TAB ────────────────────────────────────────────────────── -->
-    <div id="pane-upload" class="hidden">
-      <h2 class="text-xl font-bold text-gray-800 mb-4">
-        <i class="fas fa-upload text-green-600 mr-2"></i>필지 업로드
-      </h2>
-
-      <div class="bg-white rounded-xl shadow p-6 mb-4">
-        <label class="text-sm font-medium text-gray-700 mb-2 block">대상 프로젝트 선택</label>
-        <select id="upload-project-select" 
-          class="w-full border rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="">-- 프로젝트 선택 --</option>
-        </select>
-
-        <!-- Drop zone -->
-        <div id="drop-zone"
-          class="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition"
-          onclick="document.getElementById('file-input').click()"
-          ondragover="event.preventDefault(); this.classList.add('border-blue-500','bg-blue-50')"
-          ondragleave="this.classList.remove('border-blue-500','bg-blue-50')"
-          ondrop="handleDrop(event)">
-          <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
-          <p class="text-gray-600 font-medium">CSV 또는 GeoJSON 파일을 드래그하거나 클릭</p>
-          <p class="text-gray-400 text-xs mt-2">
-            CSV: lat/lon/supplier_name/parcel_ref 컬럼 | GeoJSON: Feature/FeatureCollection<br>
-            최대 10MB, 최대 5,000 필지
-          </p>
-        </div>
-        <input id="file-input" type="file" accept=".csv,.geojson,.json" class="hidden" onchange="handleFileSelect(event)">
-
-        <!-- Preview -->
-        <div id="upload-preview" class="hidden mt-4">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="font-medium text-gray-700 text-sm">업로드 미리보기</h3>
-            <span id="preview-badge" class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full"></span>
-          </div>
-          <div id="preview-table" class="overflow-x-auto rounded-lg border text-xs"></div>
-          <div id="preview-errors" class="hidden mt-2 p-3 bg-red-50 rounded-lg text-xs text-red-700"></div>
-          <div class="flex gap-3 mt-4">
-            <button onclick="doUpload()" id="upload-btn"
-              class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition">
-              <i class="fas fa-check mr-1.5"></i>저장 및 업로드
-            </button>
-            <button onclick="clearUpload()"
-              class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm transition">
-              취소
-            </button>
-          </div>
-        </div>
+<!-- ═══════════════════════════════════════ REGULATIONS ═══════════════════════════════════════ -->
+<section class="py-20 bg-gray-50">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl lg:text-4xl font-bold mb-4">다중 규제 프레임워크 지원</h2>
+      <p class="text-gray-500">EUDR을 시작으로, EU의 주요 환경 규제를 모두 대응합니다</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-8">
+      <div class="bg-white rounded-2xl p-8 shadow-sm border-2 border-green-200">
+        <div class="text-sm font-bold text-green-600 mb-2">현재 지원</div>
+        <h3 class="font-bold text-xl mb-2">EUDR</h3>
+        <p class="text-gray-500 text-sm">EU 산림전용방지 규정. 7대 원자재 공급망의 비산림전용 입증 의무.</p>
       </div>
-
-      <!-- CSV Format Guide -->
-      <div class="bg-white rounded-xl shadow p-5 text-sm">
-        <h3 class="font-semibold text-gray-700 mb-3"><i class="fas fa-info-circle text-blue-500 mr-1.5"></i>파일 형식 안내</h3>
-        <div class="grid md:grid-cols-2 gap-4">
-          <div>
-            <p class="font-medium text-gray-600 mb-1">CSV 예시</p>
-            <pre class="bg-gray-50 rounded p-3 text-xs overflow-x-auto text-gray-700">lat,lon,supplier_name,parcel_ref
--3.1234,-60.5678,ABC Farm,PARCEL-001
--3.2345,-60.6789,XYZ Coop,PARCEL-002</pre>
-          </div>
-          <div>
-            <p class="font-medium text-gray-600 mb-1">GeoJSON 예시</p>
-            <pre class="bg-gray-50 rounded p-3 text-xs overflow-x-auto text-gray-700">{"type":"FeatureCollection",
-  "features":[{
-    "type":"Feature",
-    "geometry":{"type":"Point",
-      "coordinates":[-60.56,-3.12]},
-    "properties":{
-      "supplier_name":"ABC Farm",
-      "parcel_ref":"PARCEL-001"
-    }
-  }]
-}</pre>
-          </div>
-        </div>
+      <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 opacity-80">
+        <div class="text-sm font-bold text-blue-600 mb-2">준비 중</div>
+        <h3 class="font-bold text-xl mb-2">CBAM</h3>
+        <p class="text-gray-500 text-sm">탄소국경조정메커니즘. 수입 제품의 탄소 함유량 보고·과금.</p>
+      </div>
+      <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 opacity-80">
+        <div class="text-sm font-bold text-purple-600 mb-2">준비 중</div>
+        <h3 class="font-bold text-xl mb-2">CSRD</h3>
+        <p class="text-gray-500 text-sm">기업 지속가능성 보고 지침. ESG 공시 의무 확대.</p>
       </div>
     </div>
+  </div>
+</section>
 
-    <!-- ── RESULTS TAB ───────────────────────────────────────────────────── -->
-    <div id="pane-results" class="hidden">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-bold text-gray-800">
-          <i class="fas fa-chart-pie text-purple-600 mr-2"></i>분석 결과
-        </h2>
-        <div class="flex gap-3 items-center">
-          <select id="results-project-select" onchange="loadJobsForProject(this.value)"
-            class="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="">-- 프로젝트 선택 --</option>
-          </select>
-          <button id="analyze-btn" onclick="triggerAnalysis()"
-            class="hidden bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
-            <i class="fas fa-play mr-1.5"></i>분석 실행
-          </button>
-        </div>
+<!-- ═══════════════════════════════════════ CTA ═══════════════════════════════════════ -->
+<section class="gradient-hero py-20">
+  <div class="max-w-4xl mx-auto px-6 text-center">
+    <h2 class="text-3xl lg:text-4xl font-bold text-white mb-6">
+      지금 바로 EUDR 대응을 시작하세요
+    </h2>
+    <p class="text-gray-300 text-lg mb-10">
+      무료 플랜으로 시작해서 5분 안에 첫 번째 리스크 분석 결과를 확인하세요.
+    </p>
+    <div class="flex flex-wrap justify-center gap-4">
+      <a href="/" class="bg-green-500 hover:bg-green-600 text-white font-bold px-10 py-4 rounded-xl text-lg transition-all shadow-lg shadow-green-500/25">
+        무료로 시작하기 →
+      </a>
+      <a href="/docs" class="border border-gray-500 text-gray-300 hover:text-white hover:border-white font-semibold px-10 py-4 rounded-xl text-lg transition-all">
+        API 문서 보기
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ FOOTER ═══════════════════════════════════════ -->
+<footer class="bg-gray-900 text-gray-400 py-16">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="grid md:grid-cols-4 gap-8">
+      <div>
+        <h3 class="text-white font-bold text-lg mb-4">🌿 TraceCheck</h3>
+        <p class="text-sm">위성 데이터 기반 EUDR 규제 대응 SaaS. 공급망 실사 자동화의 새로운 기준.</p>
       </div>
-
-      <!-- Job selector & status -->
-      <div id="job-selector-area" class="hidden mb-4">
-        <select id="job-select" onchange="loadJobResults(this.value)"
-          class="border rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="">-- 분석 실행 선택 --</option>
-        </select>
+      <div>
+        <h4 class="text-white font-semibold mb-4">제품</h4>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/" class="hover:text-white transition">대시보드</a></li>
+          <li><a href="/docs" class="hover:text-white transition">API 문서</a></li>
+          <li><a href="#pricing" class="hover:text-white transition">요금제</a></li>
+        </ul>
       </div>
-
-      <!-- Summary cards -->
-      <div id="summary-cards" class="hidden grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white rounded-xl shadow p-4 text-center">
-          <div class="text-3xl font-bold text-gray-800" id="sum-total">-</div>
-          <div class="text-xs text-gray-500 mt-1">전체 필지</div>
-        </div>
-        <div class="bg-white rounded-xl shadow p-4 text-center border-t-4 border-green-400">
-          <div class="text-3xl font-bold text-green-600" id="sum-low">-</div>
-          <div class="text-xs text-gray-500 mt-1">🟢 LOW (이상 없음)</div>
-        </div>
-        <div class="bg-white rounded-xl shadow p-4 text-center border-t-4 border-yellow-400">
-          <div class="text-3xl font-bold text-yellow-600" id="sum-review">-</div>
-          <div class="text-xs text-gray-500 mt-1">🟡 REVIEW (검토 필요)</div>
-        </div>
-        <div class="bg-white rounded-xl shadow p-4 text-center border-t-4 border-red-400">
-          <div class="text-3xl font-bold text-red-600" id="sum-high">-</div>
-          <div class="text-xs text-gray-500 mt-1">🔴 HIGH (위험)</div>
-        </div>
+      <div>
+        <h4 class="text-white font-semibold mb-4">규제</h4>
+        <ul class="space-y-2 text-sm">
+          <li>EUDR (EU 2023/1115)</li>
+          <li>CBAM (준비 중)</li>
+          <li>CSRD (준비 중)</li>
+        </ul>
       </div>
-
-      <!-- Download buttons -->
-      <div id="download-btns" class="hidden flex gap-3 mb-4 flex-wrap">
-        <button onclick="downloadReport('json')" 
-          class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 px-4 py-2 rounded-lg text-sm font-medium transition">
-          <i class="fas fa-download mr-1.5"></i>JSON 증빙 다운로드
-        </button>
-        <button onclick="downloadReport('csv')" 
-          class="bg-green-50 hover:bg-green-100 text-green-700 border border-green-300 px-4 py-2 rounded-lg text-sm font-medium transition">
-          <i class="fas fa-file-csv mr-1.5"></i>CSV 다운로드
-        </button>
-        <button onclick="downloadReport('pdf')" 
-          class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-300 px-4 py-2 rounded-lg text-sm font-medium transition">
-          <i class="fas fa-file-pdf mr-1.5"></i>PDF 보고서 다운로드
-        </button>
-      </div>
-
-      <!-- Filter -->
-      <div id="results-filter" class="hidden flex gap-2 mb-3 text-sm">
-        <button onclick="filterResults('all')" id="filter-all"
-          class="px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 font-medium text-xs">전체</button>
-        <button onclick="filterResults('high')" id="filter-high"
-          class="px-3 py-1.5 rounded-full bg-red-100 text-red-700 text-xs">🔴 HIGH만 보기</button>
-        <button onclick="filterResults('review')" id="filter-review"
-          class="px-3 py-1.5 rounded-full bg-yellow-100 text-yellow-700 text-xs">🟡 REVIEW만 보기</button>
-        <button onclick="filterResults('low')" id="filter-low"
-          class="px-3 py-1.5 rounded-full bg-green-100 text-green-700 text-xs">🟢 LOW만 보기</button>
-      </div>
-
-      <!-- Results table -->
-      <div id="results-table-wrap" class="bg-white rounded-xl shadow overflow-hidden">
-        <div id="results-empty" class="text-center py-16 text-gray-400">
-          <i class="fas fa-satellite text-5xl mb-4"></i>
-          <p class="text-lg">프로젝트를 선택하고 분석을 실행하세요</p>
-          <p class="text-sm mt-1">필지별 EUDR 산림전용 리스크를 확인할 수 있습니다</p>
-        </div>
-        <div id="results-table" class="hidden overflow-x-auto"></div>
-      </div>
-
-      <!-- Disclaimer -->
-      <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-xs text-yellow-800">
-        <i class="fas fa-exclamation-triangle mr-1.5"></i>
-        <strong>면책 고지:</strong> 본 분석 결과는 Sentinel-2 위성 영상 기반의 <strong>사전점검 보조도구</strong>입니다.
-        EUDR 규정 준수 여부의 법적 최종 판정이 아닙니다. HIGH 또는 REVIEW 등급 필지에 대해서는
-        반드시 전문가 검토 및 현장 실사를 병행하시기 바랍니다.
+      <div>
+        <h4 class="text-white font-semibold mb-4">연락처</h4>
+        <ul class="space-y-2 text-sm">
+          <li>📧 contact@tracecheck.io</li>
+          <li>🏢 Seoul, South Korea</li>
+        </ul>
       </div>
     </div>
+    <div class="border-t border-gray-800 mt-12 pt-8 text-center text-sm">
+      <p>© 2026 TraceCheck. Powered by Copernicus Sentinel-2. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
 
-  </div><!-- /max-w-7xl -->
-</div><!-- /main-app -->
-
-<script src="/static/app.js"></script>
 </body>
 </html>
