@@ -93,17 +93,17 @@ export default function LandingPage() {
       desc: '소규모 팀을 위한 시작 플랜',
       color: 'border-white/10',
       badge: null,
-      features: ['프로젝트 3개', '필지 100개/월', 'PDF 보고서', '이메일 지원', '7일 이력 보관'],
+      features: ['프로젝트 3개', '필지 100개/월', 'PDF 보고서', '이메일 지원', '1년 이력 보관'],
     },
     {
       name: 'Pro',
-      price: '299,000',
+      price: '490,000',
       period: '/월',
       desc: '성장하는 기업을 위한 전문 플랜',
       color: 'border-emerald-500/50',
       badge: '인기',
       highlight: true,
-      features: ['프로젝트 무제한', '필지 10,000개/월', 'PDF/CSV/JSON 보고서', 'API 접근', '우선 지원', '1년 이력 보관', '팀원 10명'],
+      features: ['프로젝트 무제한', '필지 10,000개/월', 'PDF/CSV/JSON 보고서', 'REST API 접근', '우선 지원', '5년 감사 아카이브 (EUDR 준수)', '팀원 10명'],
     },
     {
       name: 'Enterprise',
@@ -112,22 +112,23 @@ export default function LandingPage() {
       desc: '대규모 공급망 맞춤 솔루션',
       color: 'border-sky-500/50',
       badge: null,
-      features: ['모든 Pro 기능', '필지 무제한', '전용 인프라', 'SLA 99.9%', '전담 매니저', '커스텀 통합', '무제한 팀원', 'SSO/SAML'],
+      features: ['모든 Pro 기능', '필지 무제한', '전용 인프라 (데이터 격리)', 'SLA 99.9%', '전담 CSM 매니저', 'SAP/Oracle ERP 연동', 'SSO/SAML 인증', '무제한 팀원', '10년 감사 아카이브'],
     },
   ];
 
   const reviews = [
-    { name: '김민준', role: 'ESG팀장, 코스피 식품기업', text: 'EUDR 대응 준비를 6개월에서 3주로 단축했습니다. 공급망 1,200개 필지의 위험 등급을 한눈에 파악할 수 있어 감사 대응이 획기적으로 간편해졌습니다.', stars: 5 },
-    { name: '이서연', role: '지속가능경영팀, 글로벌 유통사', text: '위성 데이터 기반 분석의 정확도가 놀랍습니다. 현장 실사 비용을 70% 절감하면서도 규정 준수 증빙의 신뢰도를 오히려 높였습니다.', stars: 5 },
-    { name: 'Thomas K.', role: 'Head of Compliance, EU Trading Co.', text: 'The automated DDS generation saved our legal team countless hours. TraceCheck is now an essential part of our EUDR compliance workflow.', stars: 5 },
+    { name: '김민준', role: 'ESG팀장, 식품 수출기업 (파일럿 고객)', text: 'EUDR 대응 준비를 6개월에서 3주로 단축했습니다. 공급망 필지의 위험 등급을 한눈에 파악할 수 있어 감사 대응 준비가 훨씬 간편해졌습니다.', stars: 5 },
+    { name: '이서연', role: '지속가능경영팀, 유통사 (파일럿 고객)', text: '위성 데이터 기반 사전 스크리닝으로 현장 실사 대상을 사전 선별할 수 있었습니다. 다만 HIGH 등급 필지는 반드시 현장 확인과 병행하는 것을 권장합니다.', stars: 5 },
+    { name: 'Thomas K.', role: 'Compliance Manager, EU Importer (Pilot)', text: 'The automated DDS generation saved our legal team significant time. We use TraceCheck as a first-pass screening tool alongside our existing due diligence process.', stars: 5 },
   ];
 
   const faqs = [
     { q: 'EUDR 규정에 어떻게 대응하나요?', a: 'TraceCheck는 EU 삼림벌채방지법(EUDR)이 요구하는 Due Diligence Statement(DDS) 자동 생성, 공급망 트레이서빌리티, 지리적 위치 증빙을 모두 지원합니다. 위성 이미지 분석으로 2020년 12월 31일 이후 삼림 변화를 감지하여 적합성 여부를 판단합니다.' },
     { q: '어떤 데이터 형식을 지원하나요?', a: 'CSV, GeoJSON, Shapefile 등 주요 지리정보 형식을 지원합니다. 최소 위도/경도 좌표만 있으면 분석이 가능하며, 폴리곤 데이터를 사용하면 더욱 정밀한 분석이 가능합니다.' },
     { q: '분석에 얼마나 걸리나요?', a: '필지 수에 따라 다르지만 100개 필지 기준 약 2-5분, 1,000개 필지 기준 약 15-30분이 소요됩니다. 분석 완료 시 이메일과 웹훅으로 알림을 받을 수 있습니다.' },
-    { q: '데이터 보안은 어떻게 보장되나요?', a: '모든 데이터는 AES-256으로 암호화되어 저장되며, 전송 시 TLS 1.3을 적용합니다. SOC 2 Type II 인증을 준비 중이며, 유럽 데이터 서버(GDPR 준수) 옵션도 제공됩니다.' },
-    { q: 'API 통합이 가능한가요?', a: 'Pro 플랜부터 REST API를 제공합니다. Python, JavaScript SDK를 지원하며, 웹훅으로 분석 완료 이벤트를 실시간 수신할 수 있습니다. API 문서는 docs.tracecheck.io에서 확인하세요.' },
+    { q: '데이터 보안은 어떻게 보장되나요?', a: '모든 데이터는 AES-256으로 암호화되어 저장되며, 전송 시 TLS 1.3을 적용합니다. SOC 2 Type II 및 ISO 27001 인증을 준비 중이며(2026 하반기 목표), Enterprise 플랜은 전용 인프라와 유럽 데이터 서버(GDPR 준수) 옵션을 제공합니다.' },
+    { q: '위성 분석만으로 EUDR 준수가 가능한가요?', a: 'TraceCheck의 위성 분석은 공급망 리스크를 사전 스크리닝하는 도구입니다. HIGH 등급 필지에 대해서는 반드시 현장 실사(ground-truthing)를 병행할 것을 권장합니다. 구름, 계절 변화, 자연재해 등으로 인한 오탐(false positive) 가능성이 있으며, 최종 실사 판단은 담당자의 검증이 필요합니다. TraceCheck는 이 과정을 효율화하는 도구이지, 대체하는 도구가 아닙니다.' },
+    { q: 'API 통합이 가능한가요?', a: 'Pro 플랜부터 REST API를 제공합니다. Python, JavaScript SDK를 지원하며, 웹훅으로 분석 완료 이벤트를 실시간 수신할 수 있습니다. Enterprise 플랜에서는 SAP, Oracle 등 ERP/SCM 시스템 연동을 지원합니다.' },
   ];
 
   return (
@@ -216,11 +217,23 @@ export default function LandingPage() {
       {/* Trust badges */}
       <section className="py-10 border-y border-white/5 bg-slate-900/50">
         <div className="max-w-5xl mx-auto px-4">
-          <p className="text-center text-slate-500 text-sm mb-6">세계 선도 기업들이 신뢰하는 플랫폼</p>
-          <div className="flex flex-wrap justify-center gap-8 items-center opacity-40">
-            {['LOTTE', 'CJ제일제당', 'POSCO', 'Maersk', 'Unilever', 'Ahold'].map(b => (
-              <span key={b} className="text-slate-300 font-bold text-lg tracking-wide">{b}</span>
-            ))}
+          <div className="flex flex-wrap justify-center gap-8 items-center">
+            <div className="flex items-center gap-3">
+              <Lock className="w-4 h-4 text-slate-500" />
+              <span className="text-slate-400 text-sm">AES-256 암호화</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Shield className="w-4 h-4 text-slate-500" />
+              <span className="text-slate-400 text-sm">TLS 1.3 전송 보안</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Globe className="w-4 h-4 text-slate-500" />
+              <span className="text-slate-400 text-sm">EU 데이터 서버 옵션</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-4 h-4 text-amber-500" />
+              <span className="text-slate-400 text-sm">ISO 27001 · SOC 2 인증 준비 중</span>
+            </div>
           </div>
         </div>
       </section>

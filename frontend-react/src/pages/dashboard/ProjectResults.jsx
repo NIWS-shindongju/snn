@@ -34,7 +34,10 @@ function SummaryBanner({ summary }) {
           {summary.high}개 필지에서 HIGH 위험이 감지되었습니다
         </div>
         <div className="text-slate-400 text-sm">
-          즉각적인 검토가 필요합니다. 해당 필지의 공급망을 일시 중단하고 심층 실사를 실시하세요.
+          즉각적인 검토가 필요합니다. 해당 필지의 공급망을 일시 중단하고 <strong className="text-red-300">현장 실사(ground-truthing)</strong>를 실시하세요.
+        </div>
+        <div className="text-slate-500 text-xs mt-2 flex items-center gap-1">
+          ⚠️ 위성 분석은 사전 스크리닝 도구입니다. 구름·계절 변화 등으로 인한 오탐 가능성이 있으므로, HIGH 등급 필지는 반드시 현장 확인을 병행하세요.
         </div>
       </div>
     </div>
